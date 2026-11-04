@@ -1308,7 +1308,7 @@ nav a[hidden] { display: none !important; }
   }
   // Välilehtikohtainen havainto: mitä data kertoo ja mitä tehdään (valmennuspäällikkö)
   function sjInsight(id, K) {
-    const IK = K.ikaluokat || [], ALL = (K.sarjat || []).filter((r) => r.ottelut), SY = ALL.filter((r) => !r.hh && r.kausiosa === 'syksy'), med = (a) => { const v = a.filter((x) => x != null).sort((x, y) => x - y); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
+    const IK = K.ikaluokat || [], ALL = (K.sarjat || []).filter((r) => r.ottelut && !/lopputurnaus/i.test(r.sarja)), SY = ALL.filter((r) => !r.hh && r.kausiosa === 'syksy'), med = (a) => { const v = a.filter((x) => x != null).sort((x, y) => x - y); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
     const lyh = (r) => r.ikaluokka + ' ' + String(r.sarja || '').replace(r.ikaluokka + ' ', '').replace('Liiga Pohjoinen', 'Liiga');
     const best = (ik, osa) => ALL.filter((r) => r.ikaluokka === ik && !r.hh && r.kausiosa === (osa || 'syksy')).sort((a, b) => (a.taso_nro ?? 99) - (b.taso_nro ?? 99) || (a.sija ?? 99) - (b.sija ?? 99))[0];
     const lst = (a, n) => a.slice(0, n || 6).join(', ') + (a.length > (n || 6) ? ' ja ' + (a.length - (n || 6)) + ' muuta' : '');
@@ -1350,7 +1350,8 @@ nav a[hidden] { display: none !important; }
   // Yhteenveto: kolme havaintoa toimenpiteineen + ikäluokat yhdellä silmäyksellä
   function sjYhteenveto(K) {
     const IK = (K.ikaluokat || []).slice().sort((a, b) => (a.sukupuoli === b.sukupuoli ? a.ika - b.ika : (a.sukupuoli === 'Pojat' ? -1 : 1)));
-    const SY = (K.sarjat || []).filter((r) => r.ottelut && !r.hh && r.kausiosa === 'syksy');
+    const LTR = (K.sarjat || []).filter((r) => r.ottelut && /lopputurnaus/i.test(r.sarja));
+    const SY = (K.sarjat || []).filter((r) => r.ottelut && !r.hh && r.kausiosa === 'syksy' && !/lopputurnaus/i.test(r.sarja));
     const best = (ik) => SY.filter((r) => r.ikaluokka === ik).sort((a, b) => (a.taso_nro ?? 99) - (b.taso_nro ?? 99) || (a.sija ?? 99) - (b.sija ?? 99))[0];
     const lyh = (sarja, ik) => String(sarja || '').replace(ik + ' ', '').replace('Liiga Pohjoinen', 'Liiga').replace('SM-lopputurnaus', 'SM').replace('karsinta Ykköseen', 'karsinta');
     const P = K.pysyvyys || {}, gP = IK.filter((r) => r.sukupuoli === 'Pojat'), gT = IK.filter((r) => r.sukupuoli !== 'Pojat');
@@ -1377,7 +1378,8 @@ nav a[hidden] { display: none !important; }
         a: (PS.length ? 'Käy syntymävuosien ' + PS.map((r) => r.synt).join(' ja ') + ' lopettaneet läpi (Putki-välilehti). ' : '') + (lo != null && ja != null && lo < ja ? 'Vähän pelaavat lopettavat: sovi peliaikalupaus jokaiselle.' : '') }];
     const hc = (h) => el('div', { class: 'card insight ' + h.lv }, el('div', { class: 'eyebrow', text: h.k }), el('div', { class: 'row', style: 'align-items:baseline;gap:8px' }, el('span', { class: 'big', text: h.big }), el('span', { class: 'note', text: h.t })),
       el('p', { style: 'margin:6px 0 0;font-size:13.5px;line-height:1.45', text: h.d }), el('div', { class: 'todo' }, el('b', { text: 'Toimenpide (valmennuspäällikkö): ' }), h.a));
-    const tile = (r) => { const b = best(r.ikaluokka), a = b ? arvio(b) : null;
+    const tile = (r) => { const b = best(r.ikaluokka), a = b ? arvio(b) : null, lt = b ? LTR.find((q) => q.ikaluokka === r.ikaluokka && tidOf(q) === tidOf(b)) : null;
+      if (b && lt) r = Object.assign({}, r, { syksy_sarja: b.sarja + ' +SM ' + lt.sija + '.', syksy_sija: b.sija, syksy_joukkueita: b.joukkueita });
       return el('div', { class: 'iktile ' + (r.syksy_ylin ? 'ok' : 'miss'), title: r.ikaluokka + ': ' + (r.syksy_sarja || '—') + (r.syksy_sija ? ', sija ' + r.syksy_sija + ' / ' + r.syksy_joukkueita : '') + (a ? ' · ' + a[0] : '') + ' · ' + (r.joukkueita || 0) + ' joukkuetta' },
         el('b', { text: r.ikaluokka }), el('span', { class: 'iks', text: lyh(r.syksy_sarja, r.ikaluokka) || '—' }), el('span', { class: 'ikn' }, r.syksy_sija ? r.syksy_sija + '.' : '', a ? el('i', { class: 'ikdot', style: 'background:' + a[1], title: a[0] }) : null)); };
     const strip = (lbl, L) => L.length ? el('div', { class: 'ikrow' }, el('span', { class: 'iklbl', text: lbl }), el('div', { class: 'iktiles' }, L.map(tile))) : null;
@@ -1420,18 +1422,21 @@ nav a[hidden] { display: none !important; }
         svg.append(sv('rect', { x: cx(yl) - cw / 2 + 2, y: y - RH / 2 + 3, width: cw - 4, height: RH - 6, rx: 5, fill: 'var(--accent-soft)' }));
         svg.append(sv('text', { x: 8, y: y + 4, 'font-size': 13, 'font-weight': 600, fill: 'var(--ink)', text: ik.ikaluokka }));
         svg.append(sv('line', { x1: L0 - 4, x2: W - R0, y1: y + RH / 2, y2: y + RH / 2, stroke: 'var(--line)', 'stroke-width': 0.6 }));
-        const teams = new Map();
-        ALL.filter((r) => r.ikaluokka === ik.ikaluokka && !r.hh).forEach((r) => { const k = tidOf(r); const cur = teams.get(k); const pref = (x) => (x.kausiosa === osa ? 0 : 1) * 10 + (String(x.taso).startsWith('Karsinta') ? 1 : 0); if (!cur || pref(r) < pref(cur)) teams.set(k, r); });
+        const teams = new Map(), LT = {};
+        ALL.filter((r) => r.ikaluokka === ik.ikaluokka && !r.hh && /lopputurnaus/i.test(r.sarja)).forEach((r) => { LT[tidOf(r)] = r; });
+        ALL.filter((r) => r.ikaluokka === ik.ikaluokka && !r.hh && !(/lopputurnaus/i.test(r.sarja) && ALL.some((q) => q !== r && tidOf(q) === tidOf(r) && q.ikaluokka === r.ikaluokka && !/lopputurnaus/i.test(q.sarja)))).forEach((r) => { const k = tidOf(r); const cur = teams.get(k); const pref = (x) => (x.kausiosa === osa ? 0 : 1) * 10 + (String(x.taso).startsWith('Karsinta') ? 1 : 0); if (!cur || pref(r) < pref(cur)) teams.set(k, r); });
         const byCol = {};
         [...teams.values()].sort((a, b) => a.taso_nro - b.taso_nro || (a.sija || 99) - (b.sija || 99)).forEach((r) => { const key = Math.min(9, Math.ceil(r.taso_nro)); (byCol[key] = byCol[key] || []).push(r); });
         if (!byCol[yl]) svg.append(sv('rect', { x: cx(yl) - cw / 2 + 3, y: y - RH / 2 + 4, width: cw - 6, height: RH - 8, rx: 5, fill: 'none', stroke: 'var(--warn)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }), sv('text', { x: cx(yl), y: y + 4, 'text-anchor': 'middle', 'font-size': 10.5, fill: 'var(--muted)', text: 'puuttuu' }));
         Object.entries(byCol).forEach(([key, list]) => {
           const n = list.length, step = 14, x0 = cx(Number(key)) - (n - 1) * step / 2 - (n > 1 ? 0 : 0);
           list.forEach((r, k) => { const a = arvio(r); const kars = String(r.taso).startsWith('Karsinta') || r.taso === 'SM-karsinta'; const x = (n === 1 ? cx(Number(key)) - 14 : x0 - 14 + k * step);
-            svg.append(sv('g', null, sv('title', { text: `${r.joukkue} · ${r.sarja} (${r.kausiosa}) · ${r.sija}./${r.joukkueita} · kärkeä vastaan ${pctv(r.karki_pisteet, r.karki_max) ?? '–'} % · ${a[0]}` }),
+            const lt = LT[tidOf(r)] && LT[tidOf(r)] !== r ? LT[tidOf(r)] : null;
+            svg.append(sv('g', null, sv('title', { text: `${r.joukkue} · ${r.sarja} (${r.kausiosa}) · ${r.sija}./${r.joukkueita} · kärkeä vastaan ${pctv(r.karki_pisteet, r.karki_max) ?? '–'} % · ${a[0]}` + (lt ? ` · jatkoi: ${lt.sarja} ${lt.sija}./${lt.joukkueita}` : '') }),
               sv('circle', { cx: x, cy: y, r: 6, fill: kars ? 'var(--panel)' : a[1], stroke: n > 1 ? 'var(--panel)' : a[1], 'stroke-width': kars ? 2 : 1.5 }))); });
           const lx = (n === 1 ? cx(Number(key)) - 14 : x0 - 14 + (n - 1) * step) + 10;
-          svg.append(sv('text', { x: lx, y: y + 4, 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)', text: n === 1 ? list[0].sija + '.' : n + ' joukk.' }));
+          const lt1 = n === 1 && LT[tidOf(list[0])] && LT[tidOf(list[0])] !== list[0] ? LT[tidOf(list[0])] : null;
+          svg.append(sv('text', { x: lx, y: y + 4, 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)', text: n === 1 ? list[0].sija + '.' + (lt1 ? ' +SM' : '') : n + ' joukk.' }));
         });
       });
       return el('div', { class: 'card', id: 'sj-portaikko' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Portaikko: millä tasolla VPS:n joukkueet pelaavat (' + (osa === 'kevät' ? 'kevät' : 'syksy') + ')' })),
