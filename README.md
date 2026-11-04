@@ -53,6 +53,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Muutoshistoria
 | Päivä | Muutos | Migraatio |
 | --- | --- | --- |
+| 4.11.2026 | Ehdotusmerkintä: Portaat-luvut näkyvät merkinnällä ⚑, kunnes seura kuittaa ne mittarin muokkauksesta | 009 |
 | 4.11.2026 | Pelaajapolun historia 2020–2026 Portaat-aineistosta; mittarigraafit näyttävät koko historian ja katkaisevat viivan puuttuvan vuoden kohdalla | 009 |
 | 4.11.2026 | Sarjat ja pysyvyys: värit erottuvat myös värisokeille, puuttuva ylin taso merkitty, nelikentän selite kuvan alle, putken osuudet näkyviin | – |
 | 4.11.2026 | Pelaajapolun mittareiden laskentasääntö | 008 |

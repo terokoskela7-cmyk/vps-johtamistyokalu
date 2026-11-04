@@ -4,12 +4,14 @@
 -- Yhteistyöseurojen pelaajia (WFA) ei lasketa VPS:lle; ne kirjataan lähdetietoon erikseen.
 -- Maajoukkue = maaottelut, EM-/MM-karsinnat, UEFA Development ja A-maajoukkue; pelkkä FIFA TDS -leiri ei lasketa.
 -- Tähtitarha ei ole PalloID-aineistossa: luvut Palloliiton julkaisemista nimilistoista, puuttuvat vuodet täydennetään.
+-- Luvut merkitään ehdotukseksi (tarkistus). Merkintä poistuu, kun seura kuittaa luvut mittarin muokkauksesta.
 -- Toistettava. Uudet luvut korvaavat saman vuoden aiemman kirjauksen.
 
 update dokumentti
 set data = data
   || jsonb_build_object('toteumat', coalesce(data->'toteumat', '{}'::jsonb) || v.toteumat)
   || jsonb_build_object('lahde', v.lahde)
+  || jsonb_build_object('tarkistus', 'Portaat-ehdotus 4.11.2026 – seura tarkistaa luvut')
 from (values
   ('huuhkajaturnaus', '{"2020":6,"2021":6,"2022":7,"2023":7,"2024":3,"2025":5,"2026":7}'::jsonb,
    'Eri pelaajat vuodessa, 14-vuotiaat pojat. Portaat/PalloID: Huuhkaja-tapahtuma 2020–2022, Huuhkajaturnaus 2023–. Seura PalloID-kauden mukaan; Palloliiton nimilistoissa VPS:n nimellä 2023: 8, 2024: 3, 2025: 6, 2026: 5.'),

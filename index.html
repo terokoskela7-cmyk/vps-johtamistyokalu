@@ -578,6 +578,7 @@ nav a[hidden] { display: none !important; }
     el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Kehitys kohti tavoitetta 2030' }), el('span', { class: 'note', text: 'Yhtenäinen viiva = toteumat · rengas = tavoite 2030 · katkoviiva = matka tavoitteeseen · pisteviiva = välitavoite' })),
     el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))' }, M.map((m) => el('div', { style: 'display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;min-width:0' },
       el('div', { class: 'row', style: 'justify-content:space-between;align-items:flex-start;gap:8px' }, el('b', { text: m.mittari, style: 'font-size:13px;line-height:1.3' }), pill(tila(m))),
+      m.tarkistus ? el('div', { class: 'note', style: 'color:var(--warn);font-size:11.5px', text: '⚑ ' + m.tarkistus }) : null,
       el('div', { class: 'note', text: [numOrNull(m.tavoite_luku) != null ? 'Tavoite 2030: ' + fmtM(m, Number(m.tavoite_luku)) : null, numOrNull(m.valitavoite_luku) != null ? 'välitavoite ' + fmtM(m, Number(m.valitavoite_luku)) : null].filter(Boolean).join(' · ') || (m.osa || '') }), mKaavio(m),
       numOrNull(m.tavoite_luku) == null ? el('div', { class: 'note', style: 'font-size:11.5px', text: 'Tavoite ei ole luku (' + (m.tavoite_2030 || '—') + '). Lisää tavoitteen lukuarvo mittarin muokkauksesta.' }) : null))));
 
@@ -592,6 +593,7 @@ nav a[hidden] { display: none !important; }
       e.preventDefault(); if (!canWrite) return; const fd = new FormData(e.target); const o = {};
       ['mittari', 'osa', 'valitavoite', 'tavoite_2030', 'yksikko', 'omistaja', 'lahde'].forEach((k) => { o[k] = String(fd.get(k) || '').trim(); });
       ['valitavoite_luku', 'tavoite_luku', 'jarj'].forEach((k) => { o[k] = numOrNull(fd.get(k)); });
+      if (fd.get('kuittaus')) { o.tarkistus = ''; o.tarkistettu = new Date().toISOString().slice(0, 10) + ' ' + (me || ''); }
       if (!o.mittari) { toast('Anna mittarille nimi'); return; }
       try {
         if (mEdit === 'uusi') { if (o.jarj == null) o.jarj = Math.max(0, ...M.map((x) => Number(x.jarj) || 0)) + 1; o.toteumat = {}; o.luotu = new Date().toISOString(); await db.collection('mittarit').add(o); toast('Mittari lisätty'); }
@@ -611,6 +613,7 @@ nav a[hidden] { display: none !important; }
         f('omistaja', 'Omistaja', m.omistaja),
         f('lahde', 'Lähde', m.lahde),
         f('jarj', 'Järjestys', m.jarj, { type: 'number', step: '1' })),
+      m.tarkistus ? el('label', { class: 'chk', style: 'color:var(--warn)' }, el('input', { type: 'checkbox', id: 'mf-kuittaus', name: 'kuittaus' }), 'Seura on tarkistanut toteumat (poistaa merkinnän: ' + m.tarkistus + ')') : null,
       el('div', { class: 'row', style: 'justify-content:space-between' },
         el('div', { class: 'row' }, el('button', { type: 'submit', disabled: !canWrite }, 'Tallenna'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Peruuta')),
         mEdit !== 'uusi' ? (confirmDel === 'mD'
@@ -661,7 +664,7 @@ nav a[hidden] { display: none !important; }
       el('div', { class: 'tw' }, el('table', null,
         el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Välitavoite' }), el('th', { text: '2030' }), YEARS_T.map((y) => el('th', { class: 'num', text: String(y) })), el('th', { text: 'Tila' }), el('th', { text: 'Omistaja' }), el('th', { text: '' }))),
         el('tbody', null, M.map((m) => el('tr', null,
-          el('td', { style: 'min-width:15rem' }, el('div', { text: m.mittari }), el('div', { class: 'note', text: m.osa }), m.lahde ? el('div', { class: 'note', style: 'font-size:11.5px', text: 'Lähde: ' + m.lahde }) : null),
+          el('td', { style: 'min-width:15rem' }, el('div', { text: m.mittari }), el('div', { class: 'note', text: m.osa }), m.lahde ? el('div', { class: 'note', style: 'font-size:11.5px', text: 'Lähde: ' + m.lahde }) : null, m.tarkistus ? el('div', { class: 'note', style: 'font-size:11.5px;color:var(--warn)', text: '⚑ ' + m.tarkistus }) : null),
           el('td', { text: m.valitavoite, style: 'min-width:8.5em' }), el('td', { text: m.tavoite_2030, style: 'min-width:7em' }),
           YEARS_T.map((y) => el('td', { class: 'num' }, num(m, y))),
           el('td', null, pill(tila(m))),
