@@ -359,7 +359,7 @@ nav a[hidden] { display: none !important; }
   const LS = { get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
   const url = CONFIG.url || LS.get('vps-supa-url'), key = CONFIG.key || LS.get('vps-supa-key');
   const $ = (id) => document.getElementById(id);
-  const KIRJOITTAJAT = ['urheilutoimi', 'valmennus', 'analyytikko', 'toiminnanjohtaja'];
+  const KIRJOITTAJAT = ['urheilutoimi', 'valmennus', 'analyytikko', 'toiminnanjohtaja', 'hallitus_taysi'];
   let sb = null, session = null, rooli = null, readyResolve;
   const ready = new Promise((r) => { readyResolve = r; });
   window.__vps = { ready, get rooli() { return rooli; }, get email() { return session && session.user.email; }, rpc: (fn, a) => sb.rpc(fn, a || {}) };
@@ -405,7 +405,7 @@ nav a[hidden] { display: none !important; }
     $('login').hidden = true;
     document.documentElement.dataset.rooli = rooli;
     const foot = document.querySelector('.side .foot');
-    if (foot) { const ub = document.createElement('div'); ub.className = 'userbar'; ub.innerHTML = '<span></span><button type="button">Kirjaudu ulos</button>'; ub.firstChild.textContent = s.user.email + ' · ' + (rooli === 'toiminnanjohtaja' ? 'toimitusjohtaja' : rooli); ub.lastChild.onclick = async () => { await sb.auth.signOut(); location.reload(); }; foot.append(ub); }
+    if (foot) { const ub = document.createElement('div'); ub.className = 'userbar'; ub.innerHTML = '<span></span><button type="button">Kirjaudu ulos</button>'; ub.firstChild.textContent = s.user.email + ' · ' + ({ toiminnanjohtaja: 'toimitusjohtaja', hallitus_taysi: 'hallitus (täysi)' }[rooli] || rooli); ub.lastChild.onclick = async () => { await sb.auth.signOut(); location.reload(); }; foot.append(ub); }
     readyResolve();
   }
 
@@ -465,7 +465,7 @@ nav a[hidden] { display: none !important; }
   let db = null, me = null, canWrite = true, pendingRender = false, openSlot = null, confirmDel = null, mEdit = null;
   const KU = { list: null, loading: false, err: null };
   const UTJ = () => !!(window.__vps && window.__vps.rooli === 'urheilutoimi');
-  const TALO = () => !!(window.__vps && ['urheilutoimi', 'toiminnanjohtaja'].includes(window.__vps.rooli));   // pelaajakohtaiset kustannukset
+  const TALO = () => !!(window.__vps && ['urheilutoimi', 'toiminnanjohtaja', 'hallitus_taysi'].includes(window.__vps.rooli));   // pelaajakohtaiset kustannukset
   const $view = document.getElementById('view'), $status = document.getElementById('status');
   const $theme = document.getElementById('themebtn');
   const applyTheme = (th) => { document.documentElement.setAttribute('data-theme', th); if ($theme) $theme.textContent = th === 'dark' ? 'Vaalea teema' : 'Tumma teema'; try { localStorage.setItem('vps-theme', th); } catch (e) { /* ei tallennusta */ } };
@@ -658,7 +658,7 @@ nav a[hidden] { display: none !important; }
   }
 
   // --- Käyttäjät ja roolit (vain urheilutoimenjohtaja) ---
-  const KROOLIT = [['urheilutoimi', 'Urheilutoimi (omistaja)'], ['valmennus', 'Valmennus'], ['analyytikko', 'Analyytikko'], ['toiminnanjohtaja', 'Toimitusjohtaja'], ['hallitus', 'Hallitus (vain raportti)']];
+  const KROOLIT = [['urheilutoimi', 'Urheilutoimi (omistaja)'], ['valmennus', 'Valmennus'], ['analyytikko', 'Analyytikko'], ['toiminnanjohtaja', 'Toimitusjohtaja'], ['hallitus_taysi', 'Hallitus (täysi)'], ['hallitus', 'Hallitus (vain raportti)']];
   const kuLoad = async () => { KU.loading = true; render(); const { data, error } = await window.__vps.rpc('listaa_kayttajat'); KU.loading = false; KU.err = error ? (error.message || String(error)) : null; KU.list = error ? [] : data; render(); };
   const kuSet = async (email, r) => { const { error } = r ? await window.__vps.rpc('aseta_rooli', { p_email: email, p_rooli: r }) : await window.__vps.rpc('poista_rooli', { p_email: email }); if (error) { toast(error.message || String(error)); return false; } toast(r ? 'Rooli tallennettu' : 'Rooli poistettu'); confirmDel = null; await kuLoad(); return true; };
   function viewKayttajat() {
@@ -689,7 +689,7 @@ nav a[hidden] { display: none !important; }
           el('button', { type: 'submit' }, 'Tallenna'))),
       el('div', { class: 'card' }, el('h3', { text: 'Mitä rooli saa tehdä' }), el('div', { class: 'tw' }, el('table', null,
         el('thead', null, el('tr', null, ['Rooli', 'Näkee', 'Muuttaa'].map((h) => el('th', { text: h })))),
-        el('tbody', null, [['Urheilutoimi', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken'], ['Valmennus, analyytikko', 'kaiken paitsi pelaajakohtaiset kustannukset', 'kaiken paitsi kustannukset; valmennuspäällikkö omistaa Akatemia ja polku -näkymän, analyytikko Rekrytoinnin'], ['Toimitusjohtaja', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken paitsi pelaajien ja mittarien poistot'], ['Hallitus', 'strategian ja julkaistun raportin koosteet, ei pelaajia eikä palkkoja', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
+        el('tbody', null, [['Urheilutoimi', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken'], ['Valmennus, analyytikko', 'kaiken paitsi pelaajakohtaiset kustannukset', 'kaiken paitsi kustannukset; valmennuspäällikkö omistaa Akatemia ja polku -näkymän, analyytikko Rekrytoinnin'], ['Toimitusjohtaja', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken paitsi pelaajien ja mittarien poistot'], ['Hallitus (täysi)', 'kaiken, myös pelaajanimet ja kustannukset', 'kaiken paitsi poistot, käyttäjähallinnan ja urheilujohtajan päätöksen'], ['Hallitus', 'strategian ja julkaistun raportin koosteet, ei pelaajia eikä palkkoja', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
   }
   function viewStrategia() {
     const M = sorted(S.mittarit, 'jarj'), T = sorted(S.toimenpiteet, 'jarj');

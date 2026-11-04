@@ -19,6 +19,7 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 9. Pelaajien markkina-arvot: seuran sisäinen tiedosto `011_arvot_data.sql`, toimitetaan erikseen (ei tässä repossa)
 10. `012_akatemia_rekrytointi.sql` – kokoelmat akatemia (valmennuspäällikkö) ja rekrytointi (analyytikko) sekä niiden SQL-näkymät
 11. Akatemian esitäyttö: seuran sisäinen tiedosto `013_akatemia_data.sql` (alaikäisten nimiä), toimitetaan erikseen
+12. `014_hallitus_taysi.sql` – rooli Hallitus (täysi): toimitusjohtajan oikeudet hallituksen jäsenelle
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -47,6 +48,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 4.11.2026 | Rooli Hallitus (täysi) | 014 |
 | 4.11.2026 | Rekrytointi: varjokenttä (oma pelaaja, akatemian seuraaja ja kohteet pelipaikoittain, kohteen raahaus), pelipaikan profiili, kohteen tietopaketti ja päätöskortti urheilujohtajan päätöksestä | – |
 | 4.11.2026 | Akatemia ja polku -näkymä (valmius, seuraava askel, seuraajat kentälle), Rekrytointi-näkymä (kohdelista, ehdokashaku Wyscout-mittareilla, ehdokasviennit muista sarjoista), talouteen agentit, bonukset, jälleenmyyntiosuudet ja kassavirta 3 v | 012, 013 |
 | 4.11.2026 | Talous ja arvo -näkymä: joukkueen arvo, hallittu arvo, x ja y (myös valmennus ja ympäristö), myyntipotentiaaliset nuoret, pelaajakohtainen kannattavuus, arvon määrittely; koosteet hallitusraporttiin | 010, 011 |
