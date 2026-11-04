@@ -237,6 +237,22 @@ pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular',
 .akt td select, .akt td input { max-width: 100%; }
 .akt .sm { font-size: 11.5px; color: var(--muted); }
 #rk-haku td, #rk-lista td { white-space: nowrap; }
+.linkbtn { all: unset; cursor: pointer; font-weight: 600; color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+.linkbtn:hover { color: var(--accent); }
+tr.sel td { background: var(--accent-soft); }
+.vpitch { height: 1060px; }
+.vcard .slbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vcard { width: clamp(150px, 21%, 190px); }
+.vrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px; align-items: center; padding: 3px 8px; font-size: 12px; border-top: 1px solid var(--line); }
+.vrow.own, .vrow.none, .vrow.ak { grid-template-columns: 1fr auto; }
+.vrow.own span:first-child { font-weight: 600; } .vrow.none { color: var(--bad); font-size: 11.5px; } .vrow.ak { color: var(--ok); }
+.vrow .vsc { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.vrow.rk .linkbtn { font-weight: 500; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vrow.rk { border-left: 3px solid var(--none); } .vrow.t-kohde { border-left-color: var(--easy); } .vrow.t-neuvottelu { border-left-color: var(--warn); } .vrow.t-hankittu { border-left-color: var(--ok); }
+.vrow .grip { cursor: grab; color: var(--faint); touch-action: none; }
+.vdot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; background: var(--none); vertical-align: -1px; }
+.vdot.own { background: var(--ink); } .vdot.ak { background: var(--ok); } .vdot.t-kohde { background: var(--easy); } .vdot.t-neuvottelu { background: var(--warn); } .vdot.t-hankittu { background: var(--ok); }
+ul.plain { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 #rk-lista td input { min-width: 9em; }
 .bjarj .bsiirto.on { border-color: var(--accent); color: var(--accent); }
 .scard.dropover, .scard [data-drop-rooli].dropover { outline: 2px solid var(--accent); outline-offset: 1px; background-color: var(--accent-soft); }
@@ -1682,7 +1698,7 @@ nav a[hidden] { display: none !important; }
     const vsTxt = (sc, b) => sc == null || !b ? '' : (sc - b.sc >= 0 ? '+' : '') + f1(sc - b.sc) + ' vs paras oma';
     // kohdelista
     const kohde = (x) => { const w = findWy(x), pp = P.find((q) => q.id === x.paikka), sc = w && pp ? rkScore(pp, w.d, w.r) : null, b = pp ? ownBest(pp) : null;
-      return el('tr', null, el('td', null, el('b', { text: x.nimi }), el('div', { class: 'sm', text: [x.seura, x.sarja].filter(Boolean).join(' · ') })), el('td', { text: pp ? pp.pelipaikka : '—' }),
+      return el('tr', { class: F.rkSel === x.id ? 'sel' : null }, el('td', null, el('button', { type: 'button', class: 'linkbtn', onclick: () => { F.rkSel = x.id; render(); setTimeout(() => { const q = document.getElementById('rk-paketti'); if (q) q.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 40); } }, x.nimi), el('div', { class: 'sm', text: [x.seura, x.sarja].filter(Boolean).join(' · ') })), el('td', { text: pp ? pp.pelipaikka : '—' }),
         el('td', { class: 'num', text: x.ika || (w && w.r.a) || '—' }), el('td', { text: x.sopimus || (w && w.r.c) || '—' }), el('td', { class: 'num', text: eur(numOrNull(x.arvo) ?? (w && w.r.mv) ?? null) }),
         el('td', { class: 'num' }, sc ? el('span', { class: 'spill ' + lvOf(sc.sc), text: f1(sc.sc) }) : el('span', { class: 'sm', text: w ? 'mittarit puuttuvat' : 'ei Wyscout-riviä' }), sc && b ? el('div', { class: 'sm', text: vsTxt(sc.sc, b) }) : null),
         el('td', null, el('select', { id: 'rk-t-' + x.id, disabled: !canWrite, 'aria-label': 'Tila: ' + x.nimi, onchange: (e) => { e.target.blur(); save('rekrytointi/' + x.id, { tila: e.target.value }); } }, RK_TILAT.map((t) => el('option', { value: t, selected: (x.tila || 'Seurannassa') === t }, t)))),
@@ -1696,10 +1712,10 @@ nav a[hidden] { display: none !important; }
       RL.length ? el('div', { class: 'tw' }, el('table', { class: 'akt' }, el('thead', null, el('tr', null, ['Pelaaja', 'Pelipaikka', 'Ikä', 'Sopimus', 'Markkina-arvo', 'Wyscout-pisteet', 'Tila', 'Arvio', 'Vastuu', ''].map((h, i) => el('th', { class: [2, 4, 5].includes(i) ? 'num' : null, text: h })))), el('tbody', null, RL.map(kohde))))
         : el('p', { class: 'note', text: 'Kohdelista on tyhjä. Lisää ehdokkaita haulla tai käsin.' }));
     // ehdokashaku
-    const maxIka = Number(F.rkIka) || 99, minM = Number(F.rkMin) || 0, src = F.rkSrc || 'kaikki';
+    const PF = (p && p.profiili) || {}, maxIka = Number(F.rkIka) || Number(PF.ika_max) || 99, minIka = Number(PF.ika_min) || 0, minM = Number(F.rkMin) || 0, src = F.rkSrc || 'kaikki';
     const docs = p ? wyDocsFor(p.id).filter((d) => src === 'kaikki' || d.id === src) : [];
     const onList = new Set(R.map((x) => normName(x.nimi)));
-    const cand = docs.flatMap((d) => d.rows.filter((r) => !/vps/i.test(r.t) && r.m >= Math.max(minM, d.minmin || 0) && (r.a == null || r.a <= maxIka)).map((r) => ({ d, r, sc: rkScore(p, d, r) })))
+    const cand = docs.flatMap((d) => d.rows.filter((r) => !/vps/i.test(r.t) && r.m >= Math.max(minM, d.minmin || 0) && (r.a == null || (r.a <= maxIka && r.a >= minIka))).map((r) => ({ d, r, sc: rkScore(p, d, r) })))
       .sort((a, b) => ((b.sc && b.sc.sc) ?? -1) - ((a.sc && a.sc.sc) ?? -1)).slice(0, 25);
     const kpiCols = p ? (p.kpit || []).filter((k) => k.lahde === 'wyscout' && k.col).map((k) => k.col) : [];
     const lisaa = async (c) => { try { await db.collection('rekrytointi').add({ nimi: c.r.n, seura: c.r.t, sarja: c.d.pool ? c.d.sarja : 'Veikkausliiga', paikka: p.id, ika: c.r.a ?? null, sopimus: c.r.c || null, arvo: c.r.mv ?? null, wy: c.r.n, tila: 'Seurannassa', lahde: 'Wyscout ' + (c.d.tiedosto || ''), luotu: new Date().toISOString(), luoja: me }); toast(c.r.n + ' lisätty kohdelistalle'); } catch (e) { toast('Lisäys ei onnistunut'); } };
@@ -1709,7 +1725,7 @@ nav a[hidden] { display: none !important; }
           el('label', { class: 'note' }, 'Lähde ', el('select', { id: 'rk-src', onchange: (e) => { F.rkSrc = e.target.value; e.target.blur(); render(); } }, srcOpts.map(([v, t]) => el('option', { value: v, selected: src === v }, t)))),
           el('label', { class: 'note' }, 'Ikä enintään ', el('input', { id: 'rk-ika', type: 'number', min: '15', max: '40', value: F.rkIka || '', style: 'width:5em', onchange: (e) => { F.rkIka = e.target.value; e.target.blur(); render(); } })),
           el('label', { class: 'note' }, 'Minuutteja vähintään ', el('input', { id: 'rk-min', type: 'number', min: '0', step: '90', value: F.rkMin || '', style: 'width:6em', onchange: (e) => { F.rkMin = e.target.value; e.target.blur(); render(); } })))),
-      p ? el('p', { class: 'note', text: p.pelipaikka + ': aloittajia tarvitaan ' + tarveOf(p) + (best ? ' · paras oma pelaaja ' + best.nimi + ' ' + f1(best.sc) + ' / 10' : '') + (kpiCols.length ? ' · mittarit: ' + kpiCols.join(', ') : '') }) : null,
+      p ? el('p', { class: 'note', text: (PF.rooli ? 'Profiili: ' + PF.rooli + (PF.ika_min || PF.ika_max ? ', ikä ' + (PF.ika_min || '') + '–' + (PF.ika_max || '') : '') + ' · ' : '') + p.pelipaikka + ': aloittajia tarvitaan ' + tarveOf(p) + (best ? ' · paras oma pelaaja ' + best.nimi + ' ' + f1(best.sc) + ' / 10' : '') + (kpiCols.length ? ' · mittarit: ' + kpiCols.join(', ') : '') }) : null,
       !kpiCols.length ? el('p', { class: 'note', style: 'color:var(--warn)', text: 'Pelipaikalle ei ole valittu Wyscout-mittareita. Valitse ne Pelaajaryhmä-näkymän pelipaikkataulukosta (Mittarit). Ehdokkaat näkyvät silti minuuttien mukaan.' }) : null,
       !docs.length ? el('p', { class: 'note', text: 'Tälle pelipaikalle ei ole Wyscout-dataa. Tuo Veikkausliigan vienti Pelaajaryhmä-näkymässä tai ehdokasvienti alta.' })
         : el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Pelaaja', 'Joukkue', 'Sarja', 'Ikä', 'Sopimus', 'Markkina-arvo', 'Minuutit', ...kpiCols.map((c) => c + ' (pers.)'), 'Pisteet', ''].map((h, i) => el('th', { class: i >= 3 && i !== 4 ? 'num' : null, text: h })))),
@@ -1738,7 +1754,90 @@ nav a[hidden] { display: none !important; }
     return el('div', { style: 'display:flex;flex-direction:column;gap:18px' },
       pageHead('Rekrytointi', 'Analyytikon näkymä: ehdokkaat pelipaikoittain samoilla mittareilla kuin omat pelaajat. Kohteet näkyvät Pelaajaryhmä-kentällä pelipaikan kohdalla.'),
       el('div', { class: 'grid' }, ...[['Kohdelistalla', akt.length, 'seurannassa, kohde tai neuvottelu'], ['Neuvottelussa', R.filter((x) => x.tila === 'Neuvottelu').length, 'urheilujohtaja vie päätöskortille'], ['Pelipaikkoja katettu', new Set(akt.map((x) => x.paikka)).size + ' / ' + P.length, 'pelipaikat, joilla vähintään yksi kohde'], ['Hankittu', R.filter((x) => x.tila === 'Hankittu').length, 'tällä listalla']].map(([l, b, sb]) => el('div', { class: 'card' }, el('div', { class: 'eyebrow', text: l }), el('div', { class: 'big', text: String(b) }), el('div', { class: 'kpi-sub', text: sb })))),
-      lista, haku, tuonti, add);
+      varjoKentta(P, R, NY), F.rkSel && R.find((x) => x.id === F.rkSel) ? rkPaketti(R.find((x) => x.id === F.rkSel), P, NY) : null, lista, p ? rkProfiili(p) : null, haku, tuonti, add);
+  }
+  // Varjokenttä: oma aloittaja, akatemian seuraaja ja kohteet samalla kentällä (Wyscout Shadow Teams -malli)
+  function varjoKentta(P, R, NY) {
+    const J = jarjOf(null), SL = slotsJ(J), byG = {}; SL.forEach((d) => { (byG[d[2]] = byG[d[2]] || []).push(d); });
+    const slotOf = (x, grp, list) => { const codes = (byG[grp] || []).map((d) => d[0]); if (x.slot && codes.includes(x.slot)) return x.slot; const i = list.filter((q) => !(q.slot && codes.includes(q.slot))).indexOf(x); return codes.length ? codes[Math.max(0, i) % codes.length] : null; };
+    const card = (d) => { const [code, nimi, grp, x, y] = d, p = P.find((q) => q.pelipaikka === grp); if (!p) return null; const PF = p.profiili || {};
+      const own = NY.filter((q) => q.paikka === p.id && activeIn(q, SEASONS[0])).sort((a, b) => (ROOLI_J[a.rooli] ?? 3) - (ROOLI_J[b.rooli] ?? 3) || (b._osuus || 0) - (a._osuus || 0));
+      const mine = own.filter((q) => slotOf(q, grp, own) === code).slice(0, 2);
+      const AK = (S.akatemia || []).filter((q) => q.paikka === p.id && ['Valmis nyt', '1 kausi'].includes(q.valmius) && (!q.slot || q.slot === code) && (q.slot || code === byG[grp][0][0]));
+      const RK = R.filter((q) => q.paikka === p.id && RK_AKT.concat(['Hankittu']).includes(q.tila || 'Seurannassa') && (q.slot ? q.slot === code || !(byG[grp] || []).some((z) => z[0] === q.slot) && code === byG[grp][0][0] : code === byG[grp][0][0]))
+        .sort((a, b) => RK_TILAT.indexOf(b.tila || 'Seurannassa') - RK_TILAT.indexOf(a.tila || 'Seurannassa'));
+      const d0 = wyDoc(p.id), osc = (q) => { const r = wyRow(d0, q); const sc = r && r.m >= ((d0 && d0.minmin) || 450) ? rkScore(p, d0, r) : null; return sc ? f1(sc.sc) : ''; };
+      const ksc = (q) => { const w = findWy(q); const sc = w ? rkScore(p, w.d, w.r) : null; return sc ? f1(sc.sc) : ''; };
+      return el('div', { class: 'scard vcard', style: `left:${x}%;top:${y}%`, 'data-vp': p.id, 'data-vs': code },
+        el('div', { class: 'shead', title: nimi }, el('b', { text: code }), el('span', { class: 'slbl', text: PF.rooli || nimi }), el('span'), el('span')),
+        mine.map((q) => el('div', { class: 'vrow own' }, el('span', { text: q.nimi }), el('span', { class: 'vsc', text: osc(q) || (q._osuus != null ? Math.round(100 * q._osuus) + ' %' : '') }))),
+        !mine.length ? el('div', { class: 'vrow none', text: 'ei omaa pelaajaa' }) : null,
+        AK.map((q) => el('div', { class: 'vrow ak' }, el('span', { text: '↑ ' + q.nimi }), el('span', { class: 'vsc', text: q.valmius === 'Valmis nyt' ? 'valmis' : '1 kausi' }))),
+        RK.map((q) => el('div', { class: 'vrow rk rkc t-' + (q.tila || 'Seurannassa').toLowerCase().replace(/ä/g, 'a'), 'data-rk': q.id, title: (q.tila || 'Seurannassa') + ' · vedä toiselle pelipaikalle, klikkaa avataksesi tietopaketin' },
+          el('span', { class: 'grip', text: '⋮⋮' }), el('button', { type: 'button', class: 'linkbtn', onclick: () => { F.rkSel = q.id; render(); setTimeout(() => { const z = document.getElementById('rk-paketti'); if (z) z.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 40); } }, q.nimi), el('span', { class: 'vsc', text: ksc(q) }))));
+    };
+    const field = el('div', { class: 'bpitch vpitch', id: 'rk-pitch' }, el('div', { class: 'plines', 'aria-hidden': 'true' }, el('i', { class: 'half' }), el('i', { class: 'circ' }), el('i', { class: 'box top' }), el('i', { class: 'box bot' }), el('i', { class: 'six top' }), el('i', { class: 'six bot' })), SL.map(card));
+    if (canWrite) setTimeout(() => enableRkDrag(field), 0);
+    return el('section', { class: 'card', id: 'rk-varjo' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Varjokenttä · ' + J }), el('span', { class: 'note', text: 'Järjestelmä vaihdetaan Pelaajaryhmä-näkymässä' })),
+      el('p', { class: 'note', text: 'Jokaisella pelipaikalla oma pelaaja (Wyscout-pisteet tai peliaika), akatemian seuraaja (↑) ja rekrytointikohteet tilan värillä. Vedä kohde ⋮⋮ toiselle pelipaikalle; klikkaa nimeä avataksesi tietopaketin.' }),
+      el('div', { class: 'bfieldwrap' }, field),
+      el('div', { class: 'blegend' }, ...[['own', 'oma pelaaja'], ['ak', 'akatemian seuraaja'], ['t-seurannassa', 'seurannassa'], ['t-kohde', 'kohde'], ['t-neuvottelu', 'neuvottelu'], ['t-hankittu', 'hankittu']].map(([c, t]) => el('span', null, el('i', { class: 'vdot ' + c }), t))));
+  }
+  function enableRkDrag(field) {
+    field.addEventListener('pointerdown', (e) => { if (e.button > 0) return; const g = e.target.closest('.rkc .grip'); if (!g) return; const row = g.closest('.rkc'); e.preventDefault();
+      const ghost = row.cloneNode(true); ghost.classList.add('ghostchip'); ghost.style.width = row.getBoundingClientRect().width + 'px'; document.body.append(ghost); let over = null;
+      const move = (ev) => { ev.preventDefault(); ghost.style.transform = `translate(${ev.clientX - 10}px, ${ev.clientY - 10}px)`; ghost.style.display = 'none'; const t = document.elementFromPoint(ev.clientX, ev.clientY); ghost.style.display = ''; const z = t && t.closest('#rk-pitch .vcard'); if (z !== over) { if (over) over.classList.remove('dropover'); over = z; if (over) over.classList.add('dropover'); } };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); ghost.remove(); if (!over) return; over.classList.remove('dropover');
+        save('rekrytointi/' + row.dataset.rk, { paikka: over.dataset.vp, slot: over.dataset.vs }); };
+      document.addEventListener('pointermove', move, { passive: false }); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up); });
+  }
+  // Pelipaikan profiili: rooli pelitavassa ja reunaehdot (urheilujohtaja omistaa, päävalmentaja vaikuttaa, analyytikko kirjaa)
+  function rkProfiili(p) {
+    const PF = p.profiili || {}, put = (k, v) => save('paikat/' + p.id, { profiili: Object.assign({}, ((S.paikat || []).find((q) => q.id === p.id) || {}).profiili || {}, { [k]: v }) });
+    const f = (k, l, a) => el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px;min-width:0' }, l, el('input', Object.assign({ id: 'pf-' + k, value: PF[k] ?? '', disabled: !canWrite, onchange: (e) => put(k, a && a.type === 'number' ? numOrNull(e.target.value) : e.target.value) }, a || {})));
+    const K = (p.kpit || []).filter((k) => k.lahde === 'wyscout' && k.col);
+    return el('div', { class: 'card', id: 'rk-profiili' }, el('h3', { text: 'Pelipaikan profiili: ' + p.pelipaikka }),
+      el('p', { class: 'note', text: 'Hankinta arvioidaan tätä profiilia vasten. Urheilujohtaja omistaa profiilin ja vastaa kokonaisuudesta, päävalmentaja vaikuttaa siihen, analyytikko kirjaa ja hakee. Mittarit ja tavoitepersentiilit valitaan Pelaajaryhmä-näkymän pelipaikkataulukosta.' }),
+      el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))' },
+        f('rooli', 'Rooli pelitavassa', { placeholder: 'esim. rakentava toppari' }), f('ika_min', 'Ikä vähintään', { type: 'number', min: '15', max: '40' }), f('ika_max', 'Ikä enintään', { type: 'number', min: '15', max: '40' }),
+        f('palkka_max', 'Palkka enintään (€/v)', { type: 'number', min: '0', step: '1000' }), f('sopimus_v', 'Sopimuksen pituus (v)', { type: 'number', min: '1', max: '5' }), f('hyvaksyja', 'Hyväksynyt', { placeholder: 'UTJ + päävalmentaja, pvm' })),
+      el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px;margin-top:8px' }, 'Kuvaus: mitä pelaaja tekee pallon kanssa ja ilman', el('textarea', { id: 'pf-kuvaus', disabled: !canWrite, rows: 2, onchange: (e) => put('kuvaus', e.target.value) }, PF.kuvaus || '')),
+      el('div', { class: 'note', style: 'margin-top:6px', text: K.length ? 'Mittarit: ' + K.map((k) => k.col + ' ≥ ' + (k.t || 70) + '. pers.').join(' · ') : 'Mittareita ei ole valittu.' }));
+  }
+  // Tietopaketti kohteesta päätöksentekijöille (Hudl dossier -malli); urheilujohtajalla viimeinen sana
+  function rkPaketti(x, P, NY) {
+    const p = P.find((q) => q.id === x.paikka), PF = (p && p.profiili) || {}, w = findWy(x), sc = w && p ? rkScore(p, w.d, w.r) : null;
+    const d0 = p ? wyDoc(p.id) : null; let best = null;
+    if (p && d0) NY.filter((q) => q.paikka === p.id).forEach((q) => { const r = wyRow(d0, q); if (!r || r.m < (d0.minmin || 450)) return; const s2 = rkScore(p, d0, r); if (s2 && (!best || s2.sc > best.sc.sc)) best = { q, sc: s2 }; });
+    const ika = numOrNull(x.ika) ?? (w && w.r.a), arvo = numOrNull(x.arvo) ?? (w && w.r.mv), sop = x.sopimus || (w && w.r.c), palkka = numOrNull(x.palkka_arvio);
+    const chk = (ok, t) => el('li', null, el('span', { class: 'pill ' + (ok == null ? 't-none' : ok ? 't-ok' : 't-bad'), text: ok == null ? '?' : ok ? '✓' : '✗' }), ' ' + t);
+    const AK = (S.akatemia || []).filter((q) => q.paikka === x.paikka && q.valmius && q.valmius !== 'Arvioimatta' && q.valmius !== 'Seurattava');
+    const sel = (k, opts, lbl, dis) => el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px' }, lbl, el('select', { id: 'rp-' + k, disabled: !canWrite || dis, onchange: (e) => { e.target.blur(); const o = { [k]: e.target.value }; if (k === 'utj_paatos') { o.utj_pvm = new Date().toISOString().slice(0, 10); if (e.target.value === 'Hankitaan') o.tila = 'Neuvottelu'; if (e.target.value === 'Ei hankita') o.tila = 'Hylätty'; } save('rekrytointi/' + x.id, o); } }, ['', ...opts].map((o) => el('option', { value: o, selected: (x[k] || '') === o }, o || '—'))));
+    const txt = (k, lbl, ph) => el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px' }, lbl, el('input', { id: 'rp-' + k, value: x[k] || '', disabled: !canWrite, placeholder: ph || '', onchange: (e) => save('rekrytointi/' + x.id, { [k]: e.target.value }) }));
+    const kortti = async () => { const o = { tyyppi: 'Hankinta', pelaaja: x.nimi, pelipaikka: p ? p.pelipaikka : '', kausi: SEASONS[0], pvm: new Date().toISOString().slice(0, 10), sopimus_vuosia: numOrNull(PF.sopimus_v), arvo_nyt_k: arvo != null ? Math.round(arvo / 1000) : null,
+        paattaja: 'Urheilujohtaja' + (x.pv_kanta ? ' (päävalmentaja: ' + x.pv_kanta + ')' : ''), aukko: (PF.rooli ? PF.rooli + '. ' : '') + (PF.kuvaus || ''), vaihtoehto: AK.length ? 'Akatemia: ' + AK.map((q) => q.nimi + ' (' + q.valmius + ')').join(', ') : '',
+        kasvattitesti: AK.some((q) => q.valmius === 'Valmis nyt') ? 'Kyllä, valittiin oma nuori' : AK.length ? 'Kyllä, mutta ei vielä valmis' : 'Ei omaa vaihtoehtoa', perustelu: [x.arvio, x.utj_perustelu].filter(Boolean).join(' · '), jalkiarvio: 'Odottaa', luotu: new Date().toISOString(), lahde: 'rekrytointi/' + x.id };
+      try { await db.collection('kortit').add(o); await save('rekrytointi/' + x.id, { kortti: true }); toast('Päätöskortti luotu'); location.hash = 'paatokset'; } catch (e) { toast('Kortin luonti ei onnistunut'); } };
+    return el('div', { class: 'card', id: 'rk-paketti' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Tietopaketti: ' + x.nimi }), el('button', { type: 'button', class: 'ghost small', onclick: () => { F.rkSel = null; render(); } }, 'Sulje')),
+      el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))' },
+        el('div', null, el('div', { class: 'eyebrow', text: 'Perustiedot' }), el('div', { class: 'note', text: [x.seura, x.sarja, ika ? ika + ' v' : null, sop ? 'sopimus ' + sop : null, arvo != null ? 'markkina-arvo ' + eur(arvo) : null, w ? fmt(w.r.m) + ' min' : null].filter(Boolean).join(' · ') }),
+          el('div', { class: 'eyebrow', text: 'Profiili: ' + (PF.rooli || (p ? p.pelipaikka : '—')), style: 'margin-top:10px' }),
+          el('ul', { class: 'plain' }, chk(ika == null || !(PF.ika_min || PF.ika_max) ? null : ika >= (PF.ika_min || 0) && ika <= (PF.ika_max || 99), 'Ikä ' + (PF.ika_min || '–') + '–' + (PF.ika_max || '–')),
+            chk(palkka == null || !PF.palkka_max ? null : palkka <= PF.palkka_max, 'Palkka enintään ' + (PF.palkka_max ? eur(PF.palkka_max) + '/v' : 'ei asetettu') + (palkka != null ? ' (arvio ' + eur(palkka) + ')' : '')),
+            chk(sc && best ? sc.sc >= best.sc.sc : null, 'Parempi kuin paras oma' + (best ? ' (' + best.q.nimi + ' ' + f1(best.sc.sc) + ')' : '')),
+            chk(AK.length ? false : true, AK.length ? 'Akatemiassa vaihtoehto: ' + AK.map((q) => q.nimi + ' (' + q.valmius + ')').join(', ') : 'Ei akatemian vaihtoehtoa'))),
+        el('div', null, el('div', { class: 'eyebrow', text: 'Mittarit (persentiili omassa sarjassa)' }),
+          sc ? el('table', null, el('thead', null, el('tr', null, ['Mittari', 'Kohde', 'Paras oma', 'Tavoite'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))),
+            el('tbody', null, sc.det.map((q) => { const b = best && best.sc.det.find((z) => z.n === q.n), k = (p.kpit || []).find((z) => z.col === q.n); return el('tr', null, el('td', { class: 'sm', text: q.n }), el('td', { class: 'num', text: String(q.pc) }), el('td', { class: 'num', text: b ? String(b.pc) : '—' }), el('td', { class: 'num', text: String((k && k.t) || 70) })); }),
+              el('tr', { class: 'sum' }, el('td', { text: 'Pisteet 0–10' }), el('td', { class: 'num', text: f1(sc.sc) }), el('td', { class: 'num', text: best ? f1(best.sc.sc) : '—' }), el('td', null))))
+            : el('p', { class: 'note', text: w ? 'Pelipaikalle ei ole valittu Wyscout-mittareita.' : 'Kohdetta ei löydy tuoduista Wyscout-vienneistä. Tuo hänen sarjansa vienti tai kirjaa Wyscout-nimi.' }))),
+      el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));margin-top:10px' },
+        txt('video', 'Videolinkki (Wyscout-playlist)', 'https://…'), txt('palkka_arvio', 'Palkka-arvio (€/v)', 'esim. 45000'), txt('wy', 'Wyscout-nimi', 'jos eroaa'),
+        sel('analyytikko_suositus', ['Suosittelen', 'Varauksin', 'Ei'], 'Analyytikon suositus'), sel('pv_kanta', ['Puoltaa', 'Varauksin', 'Ei puolla'], 'Päävalmentajan kanta'),
+        sel('utj_paatos', ['Hankitaan', 'Odotetaan', 'Ei hankita'], 'Urheilujohtajan päätös (viimeinen sana)', !UTJ()), txt('utj_perustelu', 'Urheilujohtajan perustelu')),
+      x.video ? el('p', { class: 'note' }, el('a', { href: x.video, target: '_blank', rel: 'noopener' }, 'Avaa video')) : null,
+      el('div', { class: 'row', style: 'margin-top:10px' }, el('button', { type: 'button', disabled: !canWrite || x.utj_paatos !== 'Hankitaan', title: x.utj_paatos !== 'Hankitaan' ? 'Urheilujohtajan päätös Hankitaan tarvitaan ensin' : '', onclick: kortti }, x.kortti ? 'Tee uusi päätöskortti' : 'Tee päätöskortti'),
+        el('span', { class: 'note', text: x.utj_paatos ? 'Päätös: ' + x.utj_paatos + (x.utj_pvm ? ' (' + x.utj_pvm + ')' : '') + (x.kortti ? ' · päätöskortti tehty' : '') : 'Päätöskortti avautuu, kun urheilujohtaja on päättänyt hankinnasta.' })));
   }
 
   function HALL() { return !!(window.__vps && window.__vps.rooli === 'hallitus'); }

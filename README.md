@@ -47,6 +47,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 4.11.2026 | Rekrytointi: varjokenttä (oma pelaaja, akatemian seuraaja ja kohteet pelipaikoittain, kohteen raahaus), pelipaikan profiili, kohteen tietopaketti ja päätöskortti urheilujohtajan päätöksestä | – |
 | 4.11.2026 | Akatemia ja polku -näkymä (valmius, seuraava askel, seuraajat kentälle), Rekrytointi-näkymä (kohdelista, ehdokashaku Wyscout-mittareilla, ehdokasviennit muista sarjoista), talouteen agentit, bonukset, jälleenmyyntiosuudet ja kassavirta 3 v | 012, 013 |
 | 4.11.2026 | Talous ja arvo -näkymä: joukkueen arvo, hallittu arvo, x ja y (myös valmennus ja ympäristö), myyntipotentiaaliset nuoret, pelaajakohtainen kannattavuus, arvon määrittely; koosteet hallitusraporttiin | 010, 011 |
 | 4.11.2026 | Pelijärjestelmät 4-3-3, 4-2-3-1, 3-4-3, 3-4-2-1, 3-5-2, 5-3-2; pelipaikkojen vapaa siirto kentällä; aloittajatarve järjestelmästä; kortin Arvo-näkymä | – |
