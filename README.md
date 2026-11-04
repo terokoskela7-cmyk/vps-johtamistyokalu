@@ -22,6 +22,7 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 12. `014_hallitus_taysi.sql` – rooli Hallitus (täysi): toimitusjohtajan oikeudet hallituksen jäsenelle
 13. Akatemian Kakkos-luvut: seuran sisäinen tiedosto `015_akatemia_kakkonen.sql`, toimitetaan erikseen
 14. `016_wfa_valinnat.sql` – WFA:n pelaajat mukaan Huuhkaja- ja Helmariturnauksen valintoihin
+15. `017_tahtitarha_palloid.sql` – Tähtitarha 2023–2026 PalloID-aineistosta
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -50,6 +51,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 4.11.2026 | Tähtitarha 2023–2026 PalloID:stä (2024: 2, 2026: 3 uusina) | 017 |
 | 4.11.2026 | WFA:n pelaajat lasketaan VPS:lle Huuhkaja- ja Helmariturnauksessa | 016 |
 | 4.11.2026 | Rooli Hallitus (täysi) | 014 |
 | 4.11.2026 | Rekrytointi: varjokenttä (oma pelaaja, akatemian seuraaja ja kohteet pelipaikoittain, kohteen raahaus), pelipaikan profiili, kohteen tietopaketti ja päätöskortti urheilujohtajan päätöksestä | – |
