@@ -11,6 +11,7 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 1. `001_rakenne.sql` – taulu, roolit, säännöt, näkymät
 2. Datatiedostot `002_data.sql` ja `003_taso_data.sql` eivät ole tässä repossa, koska ne sisältävät henkilötietoja. Ne säilytetään vain seuran omassa tallennustilassa.
 3. `005_oikeudet.sql` – rajapinnan oikeudet kirjautuneille
+4. `006_kayttajahallinta_ja_tavoitteet.sql` – käyttäjähallinta työkalussa ja tavoitteiden lukuarvot graafeja varten
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -45,3 +46,11 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 
 ## SQL-näkymät harjoitteluun
 `pelaaja`, `mittari_toteuma`, `toimenpide`, `paatoskortti` – noudattavat käyttäjän oikeuksia (`security_invoker`).
+
+## Muutoshistoria
+| Päivä | Muutos | Migraatio |
+| --- | --- | --- |
+| 4.11.2026 | Mittarin lisäys, muokkaus ja poisto Strategia-näkymässä | – |
+| 4.11.2026 | Mittarigraafit 2024–2030 Strategia- ja Hallitus-näkymissä | 006 (tavoitteiden lukuarvot) |
+| 4.11.2026 | Käyttäjät ja roolit -näkymä urheilutoimelle | 006 |
+| 4.11.2026 | Ensimmäinen Supabase-versio | 001, 004, 005 |

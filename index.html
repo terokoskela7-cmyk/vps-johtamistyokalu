@@ -271,6 +271,7 @@ pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular',
       <a href="#sarjat" data-view="sarjat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Sarjat ja pysyvyys</span></a>
       <a href="#pelipaikat" data-view="pelipaikat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/><circle cx="12" cy="12" r="3"/></svg><span>Pelaajaryhmä</span></a>
       <a href="#paatokset" data-view="paatokset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span>Päätöskortit</span></a>
+      <a href="#kayttajat" data-view="kayttajat" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.9 2.6 2.6 3 5.2"/></svg><span>Käyttäjät</span></a>
     </nav>
     <div class="foot"><button type="button" class="themebtn small" id="themebtn">Vaalea teema</button><div class="note" id="status">Yhdistetään seuran tietoihin…</div></div>
   </aside>
@@ -329,7 +330,7 @@ nav a[hidden] { display: none !important; }
   const KIRJOITTAJAT = ['urheilutoimi', 'valmennus', 'analyytikko', 'toiminnanjohtaja'];
   let sb = null, session = null, rooli = null, readyResolve;
   const ready = new Promise((r) => { readyResolve = r; });
-  window.__vps = { ready, get rooli() { return rooli; }, get email() { return session && session.user.email; } };
+  window.__vps = { ready, get rooli() { return rooli; }, get email() { return session && session.user.email; }, rpc: (fn, a) => sb.rpc(fn, a || {}) };
 
   const fiErr = (e) => { const m = (e && (e.message || e.error_description)) || String(e); if (/api key|apikey|JWT|No API key/i.test(m)) return 'Julkinen avain on väärä. Kopioi se kohdasta Project Settings → API Keys (pitkä merkkijono, alkaa eyJ tai sb_publishable_).'; if (/logins are disabled|provider.*disabled|email_provider_disabled/i.test(m)) return 'Sähköpostikirjautuminen on pois päältä. Kytke Supabasessa Authentication → Sign In / Providers → Email päälle.'; if (/Email not confirmed/i.test(m)) return 'Sähköpostia ei ole vahvistettu. Rastita käyttäjälle Auto Confirm User tai vahvista se Users-listassa.'; if (/Invalid login credentials/i.test(m)) return 'Sähköposti tai salasana on väärin.'; if (/Signups not allowed|not found/i.test(m)) return 'Tällä sähköpostilla ei ole pääsyä. Pyydä urheilutoimenjohtajaa lisäämään sinut.'; if (/expired|invalid.*(otp|token)|token.*invalid/i.test(m)) return 'Koodi on väärä tai vanhentunut. Pyydä uusi koodi.'; if (/rate|seconds/i.test(m)) return 'Odota hetki ennen uutta koodia.'; if (/fetch|network/i.test(m)) return 'Supabaseen ei saatu yhteyttä. Tarkista osoite ja verkkoyhteys.'; return m; };
 
@@ -429,7 +430,9 @@ nav a[hidden] { display: none !important; }
   const JALKI = ['Odottaa', 'Saavutettu', 'Osittain', 'Ei saavutettu'];
   const S = { mittarit: null, toimenpiteet: null, paikat: null, kortit: null, kaudet: null, pelaajat: null, skenaariot: null, asetukset: null, vahvuus: null, wyscout: null, hallitusraportti: null };
   const F = { kausi: 2027, skenaario: null, chip: 'Sopimus', sp: 'Kaikki', osa: 'syksy', hh: false, ik: 'Kaikki', poik: false, nimet: false, ptila: 'Lopetti tai siirtyi', psynt: 'Kaikki' };
-  let db = null, me = null, canWrite = true, pendingRender = false, openSlot = null, confirmDel = null;
+  let db = null, me = null, canWrite = true, pendingRender = false, openSlot = null, confirmDel = null, mEdit = null;
+  const KU = { list: null, loading: false, err: null };
+  const UTJ = () => !!(window.__vps && window.__vps.rooli === 'urheilutoimi');
   const $view = document.getElementById('view'), $status = document.getElementById('status');
   const $theme = document.getElementById('themebtn');
   const applyTheme = (th) => { document.documentElement.setAttribute('data-theme', th); if ($theme) $theme.textContent = th === 'dark' ? 'Vaalea teema' : 'Tumma teema'; try { localStorage.setItem('vps-theme', th); } catch (e) { /* ei tallennusta */ } };
@@ -502,6 +505,7 @@ nav a[hidden] { display: none !important; }
       el('div', { class: 'card' }, el('h3', { text: 'Mittarit tavoitteeseen' }),
         el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Tavoite 2030' }), el('th', { class: 'num', text: 'Viimeisin' }), el('th', { text: 'Tila' }))),
           el('tbody', null, M.map((m) => { const l = lastVal(m); return el('tr', null, el('td', { text: m.mittari }), el('td', { text: m.tavoite_2030 }), el('td', { class: 'num', text: l ? fmt(l.v, m.yksikko === '%' ? 1 : 0) + (m.yksikko === '%' ? ' %' : '') + ' (' + l.y + ')' : '—' }), el('td', null, pill(tila(m)))); }))))),
+      mittariKaaviot(M),
       R && R.teksti ? el('details', { class: 'sec' }, el('summary', null, 'Hallitusraportti tekstinä'), el('div', { class: 'inner card', style: 'border:none;padding-top:0' }, el('pre', { class: 'report', text: R.teksti }))) : null);
   }
   function viewHallitus() {
@@ -533,25 +537,132 @@ nav a[hidden] { display: none !important; }
       el('div', { class: 'card' }, el('h3', { text: 'Mittarit tavoitteeseen' }),
         el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Tavoite 2030' }), el('th', { class: 'num', text: 'Viimeisin' }), el('th', { text: 'Tila' }))),
           el('tbody', null, M.map((m) => { const l = lastVal(m); return el('tr', null, el('td', { text: m.mittari }), el('td', { text: m.tavoite_2030 }), el('td', { class: 'num', text: l ? fmt(l.v, m.yksikko === '%' ? 1 : 0) + (m.yksikko === '%' ? ' %' : '') + ' (' + l.y + ')' : '—' }), el('td', null, pill(tila(m)))); }))))),
+      mittariKaaviot(M),
       el('details', { class: 'sec' }, el('summary', null, 'Hallitusraportti tekstinä'), el('div', { class: 'inner card', style: 'border:none;padding-top:0' }, el('div', { class: 'row', style: 'justify-content:flex-end' },
         el('button', { class: 'ghost', type: 'button', onclick: (e) => { const pre = e.target.closest('.card').querySelector('pre'); navigator.clipboard.writeText(report).then(() => toast('Raportti kopioitu')).catch(() => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Valittu: kopioi Ctrl/Cmd + C'); }); } }, 'Kopioi raportti')),
         el('pre', { class: 'report', text: report }))));
   }
 
+
+  // --- Mittarigraafit: toteumat 2024–2030, välitavoite ja tavoite samassa kuvassa ---
+  const numOrNull = (v) => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null : Number(v);
+  const niceTop = (v) => { if (!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; };
+  const unitOf = (m) => m.yksikko === '%' ? ' %' : (m.yksikko ? ' ' + m.yksikko : '');
+  const fmtM = (m, v) => fmt(v, m.yksikko === '%' && v % 1 !== 0 ? 1 : (v % 1 !== 0 ? 1 : 0)) + unitOf(m);
+  function mKaavio(m) {
+    const W = 300, H = 150, L = 40, R = 16, T = 16, B = 24, YRS = [2024, 2025, 2026, 2027, 2028, 2029, 2030];
+    const pts = YRS.map((y) => [y, numOrNull((m.toteumat || {})[y])]).filter((p) => p[1] != null);
+    const tg = numOrNull(m.tavoite_luku), vt = numOrNull(m.valitavoite_luku);
+    const top = niceTop(Math.max(...pts.map((p) => p[1]), tg || 0, vt || 0, 0) * 1.08);
+    const X = (y) => L + (y - 2024) / 6 * (W - L - R), Y = (v) => H - B - (v / top) * (H - B - T);
+    const g = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': m.mittari + ': toteumat ' + (pts.map((p) => p[0] + ' ' + fmtM(m, p[1])).join(', ') || 'ei vielä') + (tg != null ? '; tavoite 2030 ' + fmtM(m, tg) : ''), style: 'display:block;overflow:visible' });
+    [0, ...((Number.isInteger(top / 2) || top < 2) ? [top / 2] : []), top].forEach((t) => { g.append(sv('line', { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: 'var(--line)', 'stroke-width': 1 }), sv('text', { x: L - 6, y: Y(t) + 3.5, 'text-anchor': 'end', 'font-size': 10.5, fill: 'var(--faint)' }, fmt(t, t % 1 ? 1 : 0))); });
+    [2024, 2026, 2028, 2030].forEach((y) => g.append(sv('text', { x: X(y), y: H - 6, 'text-anchor': 'middle', 'font-size': 10.5, fill: 'var(--faint)' }, String(y))));
+        if (vt != null) g.append(sv('line', { x1: L, x2: W - R, y1: Y(vt), y2: Y(vt), stroke: 'var(--muted)', 'stroke-width': 1, 'stroke-dasharray': '2 3' }));
+    const last = pts[pts.length - 1];
+    if (tg != null) {
+      if (last) g.append(sv('line', { x1: X(last[0]), y1: Y(last[1]), x2: X(2030), y2: Y(tg), stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-dasharray': '4 4', opacity: 0.6 }));
+      g.append(sv('circle', { cx: X(2030), cy: Y(tg), r: 5, fill: 'var(--surface)', stroke: 'var(--accent)', 'stroke-width': 2 }, sv('title', null, 'Tavoite 2030: ' + fmtM(m, tg))));
+    }
+    if (pts.length > 1) g.append(sv('polyline', { points: pts.map((p) => X(p[0]) + ',' + Y(p[1])).join(' '), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    pts.forEach((p) => g.append(sv('g', null, sv('circle', { cx: X(p[0]), cy: Y(p[1]), r: 10, fill: 'transparent' }), sv('circle', { cx: X(p[0]), cy: Y(p[1]), r: 4, fill: 'var(--accent)', stroke: 'var(--surface)', 'stroke-width': 2 }), sv('title', null, p[0] + ': ' + fmtM(m, p[1])))));
+    if (last) g.append(sv('text', { x: X(last[0]), y: Y(last[1]) + (Y(last[1]) > T + 20 ? -10 : 16), 'text-anchor': last[0] >= 2029 ? 'end' : 'middle', 'font-size': 11.5, 'font-weight': 600, fill: 'var(--ink)' }, fmtM(m, last[1])));
+    if (!pts.length) g.append(sv('text', { x: (L + W - R) / 2, y: T + 14, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--muted)' }, 'Ei toteumia vielä'));
+    return g;
+  }
+  const mittariKaaviot = (M) => el('div', { class: 'card' },
+    el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Kehitys kohti tavoitetta 2030' }), el('span', { class: 'note', text: 'Yhtenäinen viiva = toteumat · rengas = tavoite 2030 · katkoviiva = matka tavoitteeseen · pisteviiva = välitavoite' })),
+    el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))' }, M.map((m) => el('div', { style: 'display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:var(--r-md);padding:12px;min-width:0' },
+      el('div', { class: 'row', style: 'justify-content:space-between;align-items:flex-start;gap:8px' }, el('b', { text: m.mittari, style: 'font-size:13px;line-height:1.3' }), pill(tila(m))),
+      el('div', { class: 'note', text: [numOrNull(m.tavoite_luku) != null ? 'Tavoite 2030: ' + fmtM(m, Number(m.tavoite_luku)) : null, numOrNull(m.valitavoite_luku) != null ? 'välitavoite ' + fmtM(m, Number(m.valitavoite_luku)) : null].filter(Boolean).join(' · ') || (m.osa || '') }), mKaavio(m),
+      numOrNull(m.tavoite_luku) == null ? el('div', { class: 'note', style: 'font-size:11.5px', text: 'Tavoite ei ole luku (' + (m.tavoite_2030 || '—') + '). Lisää tavoitteen lukuarvo mittarin muokkauksesta.' }) : null))));
+
+  // --- Mittarin lisäys ja muokkaus ---
+  function mittariLomake(M) {
+    const m = mEdit === 'uusi' ? { toteumat: {} } : (M.find((x) => x.id === mEdit) || null);
+    if (!m) return null;
+    const osat = [...new Set(M.map((x) => x.osa).filter(Boolean))];
+    const f = (id, lbl, val, attrs) => el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px;min-width:0' }, lbl, el('input', Object.assign({ id: 'mf-' + id, name: id, value: val == null ? '' : val, style: 'width:100%' }, attrs || {})));
+    const close = () => { mEdit = null; confirmDel = null; if (document.activeElement) document.activeElement.blur(); render(); };
+    return el('form', { class: 'card', id: 'mittari-lomake', onsubmit: async (e) => {
+      e.preventDefault(); if (!canWrite) return; const fd = new FormData(e.target); const o = {};
+      ['mittari', 'osa', 'valitavoite', 'tavoite_2030', 'yksikko', 'omistaja', 'lahde'].forEach((k) => { o[k] = String(fd.get(k) || '').trim(); });
+      ['valitavoite_luku', 'tavoite_luku', 'jarj'].forEach((k) => { o[k] = numOrNull(fd.get(k)); });
+      if (!o.mittari) { toast('Anna mittarille nimi'); return; }
+      try {
+        if (mEdit === 'uusi') { if (o.jarj == null) o.jarj = Math.max(0, ...M.map((x) => Number(x.jarj) || 0)) + 1; o.toteumat = {}; o.luotu = new Date().toISOString(); await db.collection('mittarit').add(o); toast('Mittari lisätty'); }
+        else await save('mittarit/' + m.id, o);
+        close();
+      } catch (err) { toast('Tallennus ei onnistunut: ' + (err.message || err)); }
+    } },
+      el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: mEdit === 'uusi' ? 'Uusi mittari' : 'Muokkaa mittaria' }), el('span', { class: 'note', text: 'Lukuarvot ohjaavat tilaa ja graafia, tekstit näkyvät taulukossa.' })),
+      el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))' },
+        f('mittari', 'Mittari', m.mittari, { required: true }),
+        el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px' }, 'Strategian osa', el('input', { id: 'mf-osa', name: 'osa', value: m.osa || '', list: 'mf-osat', style: 'width:100%' }), el('datalist', { id: 'mf-osat' }, osat.map((o) => el('option', { value: o })))),
+        f('yksikko', 'Yksikkö (esim. %, kpl, hlöä)', m.yksikko),
+        f('valitavoite', 'Välitavoite tekstinä', m.valitavoite),
+        f('valitavoite_luku', 'Välitavoite lukuna (tila lasketaan tästä)', m.valitavoite_luku, { type: 'number', step: 'any' }),
+        f('tavoite_2030', 'Tavoite 2030 tekstinä', m.tavoite_2030),
+        f('tavoite_luku', 'Tavoite 2030 lukuna (graafi)', m.tavoite_luku, { type: 'number', step: 'any' }),
+        f('omistaja', 'Omistaja', m.omistaja),
+        f('lahde', 'Lähde', m.lahde),
+        f('jarj', 'Järjestys', m.jarj, { type: 'number', step: '1' })),
+      el('div', { class: 'row', style: 'justify-content:space-between' },
+        el('div', { class: 'row' }, el('button', { type: 'submit', disabled: !canWrite }, 'Tallenna'), el('button', { type: 'button', class: 'ghost', onclick: close }, 'Peruuta')),
+        mEdit !== 'uusi' ? (confirmDel === 'mD'
+          ? el('span', { class: 'row' }, el('span', { class: 'note', text: 'Poistetaanko mittari toteumineen?' }), el('button', { type: 'button', class: 'danger small', onclick: async () => { try { await db.doc('mittarit/' + m.id).delete(); toast('Mittari poistettu'); close(); } catch (err) { toast('Poisto ei onnistunut: ' + (err.message || err)); } } }, 'Poista'), el('button', { type: 'button', class: 'ghost small', onclick: () => { confirmDel = null; if (document.activeElement) document.activeElement.blur(); render(); } }, 'Peruuta'))
+          : el('button', { type: 'button', class: 'ghost small', disabled: !canWrite, onclick: () => { confirmDel = 'mD'; if (document.activeElement) document.activeElement.blur(); render(); } }, 'Poista mittari')) : null));
+  }
+
+  // --- Käyttäjät ja roolit (vain urheilutoimenjohtaja) ---
+  const KROOLIT = [['urheilutoimi', 'Urheilutoimi (omistaja)'], ['valmennus', 'Valmennus'], ['analyytikko', 'Analyytikko'], ['toiminnanjohtaja', 'Toiminnanjohtaja'], ['hallitus', 'Hallitus (vain raportti)']];
+  const kuLoad = async () => { KU.loading = true; render(); const { data, error } = await window.__vps.rpc('listaa_kayttajat'); KU.loading = false; KU.err = error ? (error.message || String(error)) : null; KU.list = error ? [] : data; render(); };
+  const kuSet = async (email, r) => { const { error } = r ? await window.__vps.rpc('aseta_rooli', { p_email: email, p_rooli: r }) : await window.__vps.rpc('poista_rooli', { p_email: email }); if (error) { toast(error.message || String(error)); return false; } toast(r ? 'Rooli tallennettu' : 'Rooli poistettu'); confirmDel = null; await kuLoad(); return true; };
+  function viewKayttajat() {
+    if (!UTJ()) return el('div', { class: 'empty', text: 'Käyttäjiä hallinnoi urheilutoimenjohtaja.' });
+    if (KU.list === null && !KU.loading) { setTimeout(kuLoad, 0); }
+    const rows = KU.list || [];
+    const roolisel = (id, val, onch) => el('select', { id, 'aria-label': 'Rooli', onchange: onch }, el('option', { value: '', text: '— ei roolia —', selected: !val }), KROOLIT.map(([v, t]) => el('option', { value: v, text: t, selected: v === val })));
+    return el('div', { style: 'display:flex;flex-direction:column;gap:16px' },
+      pageHead('Käyttäjät ja roolit', 'Rooli ratkaisee, mitä käyttäjä näkee ja voi muuttaa. Hallitus näkee vain strategian ja julkaistun raportin.'),
+      el('div', { class: 'card' }, el('h3', { text: 'Käyttäjät' }),
+        KU.err ? el('div', { class: 'note', style: 'color:var(--bad)', text: 'Käyttäjälistaa ei saatu: ' + KU.err + '. Onko migraatio 006 ajettu?' }) : null,
+        KU.loading && !rows.length ? el('div', { class: 'note', text: 'Ladataan…' }) : null,
+        rows.length ? el('div', { class: 'tw' }, el('table', null,
+          el('thead', null, el('tr', null, ['Sähköposti', 'Rooli', 'Viimeksi kirjautunut', ''].map((h) => el('th', { text: h })))),
+          el('tbody', null, rows.map((u, i) => el('tr', null,
+            el('td', { text: u.email }),
+            el('td', null, roolisel('ku-r-' + i, u.rooli, (e) => { if (e.target.value) kuSet(u.email, e.target.value); else { confirmDel = 'ku' + i; render(); } })),
+            el('td', { text: u.viimeksi ? new Date(u.viimeksi).toLocaleString('fi-FI') : 'ei vielä' }),
+            el('td', null, u.rooli ? (confirmDel === 'ku' + i
+              ? el('span', { class: 'row' }, el('button', { type: 'button', class: 'danger small', onclick: () => kuSet(u.email, null) }, 'Poista rooli'), el('button', { type: 'button', class: 'ghost small', onclick: () => { confirmDel = null; render(); } }, 'Peruuta'))
+              : el('button', { type: 'button', class: 'ghost small', onclick: () => { confirmDel = 'ku' + i; render(); } }, 'Poista rooli')) : null)))))) : (!KU.loading ? el('div', { class: 'note', text: 'Ei käyttäjiä.' }) : null)),
+      el('form', { class: 'card', onsubmit: async (e) => { e.preventDefault(); const fd = new FormData(e.target); const em = String(fd.get('email') || '').trim(), r = String(fd.get('rooli') || ''); if (!em || !r) { toast('Anna sähköposti ja rooli'); return; } if (document.activeElement) document.activeElement.blur(); if (await kuSet(em, r)) e.target.reset(); } },
+        el('h3', { text: 'Anna rooli' }),
+        el('p', { class: 'note', text: 'Luo käyttäjätili ensin Supabasessa: Authentication → Users → Add user → Create new user (rasti Auto Confirm User). Anna salasana käyttäjälle muuta kanavaa pitkin kuin sähköpostia. Anna sitten rooli tässä.' }),
+        el('div', { class: 'row', style: 'align-items:flex-end' },
+          el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px;flex:1;min-width:220px' }, 'Sähköposti', el('input', { id: 'ku-email', name: 'email', type: 'email', required: true })),
+          el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px' }, 'Rooli', el('select', { id: 'ku-rooli', name: 'rooli', required: true }, el('option', { value: '', text: 'Valitse' }), KROOLIT.map(([v, t]) => el('option', { value: v, text: t })))),
+          el('button', { type: 'submit' }, 'Tallenna'))),
+      el('div', { class: 'card' }, el('h3', { text: 'Mitä rooli saa tehdä' }), el('div', { class: 'tw' }, el('table', null,
+        el('thead', null, el('tr', null, ['Rooli', 'Näkee', 'Muuttaa'].map((h) => el('th', { text: h })))),
+        el('tbody', null, [['Urheilutoimi, valmennus, analyytikko', 'kaiken', 'kaiken'], ['Toiminnanjohtaja', 'kaiken', 'kaiken paitsi poistot'], ['Hallitus', 'strategian ja julkaistun raportin, ei pelaajia', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
+  }
   function viewStrategia() {
     const M = sorted(S.mittarit, 'jarj'), T = sorted(S.toimenpiteet, 'jarj');
     const num = (m, y) => el('input', { class: 'n', type: 'number', step: 'any', id: 'm-' + m.id + '-' + y, 'aria-label': m.mittari + ' ' + y, value: (m.toteumat && m.toteumat[y] != null) ? m.toteumat[y] : '', disabled: !canWrite || y > NOW_Y, title: y > NOW_Y ? 'Toteuman voi kirjata, kun vuosi on alkanut' : null,
       onchange: (e) => { const v = e.target.value === '' ? null : Number(e.target.value); const t = Object.assign({}, m.toteumat || {}); t[y] = v; save('mittarit/' + m.id, { toteumat: t }); } });
-    const mt = el('div', { class: 'card' }, el('h3', { text: 'Tavoitteet ja mittarit' }),
+    const mt = el('div', { class: 'card' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Tavoitteet ja mittarit' }), el('button', { type: 'button', class: 'ghost small', disabled: !canWrite, onclick: () => { mEdit = 'uusi'; confirmDel = null; render(); setTimeout(() => { const q = document.getElementById('mf-mittari'); if (q) q.focus(); }, 30); } }, '+ Lisää mittari')),
       el('p', { class: 'note', text: 'Kirjaa toteuma kahdesti vuodessa. Tila lasketaan viimeisimmästä toteumasta välitavoitteeseen: linjassa = vähintään välitavoite, jäljessä = vähintään puolet, poikkeama = alle puolet.' }),
       el('div', { class: 'tw' }, el('table', null,
-        el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Välitavoite' }), el('th', { text: '2030' }), YEARS_T.map((y) => el('th', { class: 'num', text: String(y) })), el('th', { text: 'Tila' }), el('th', { text: 'Omistaja' }))),
+        el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Välitavoite' }), el('th', { text: '2030' }), YEARS_T.map((y) => el('th', { class: 'num', text: String(y) })), el('th', { text: 'Tila' }), el('th', { text: 'Omistaja' }), el('th', { text: '' }))),
         el('tbody', null, M.map((m) => el('tr', null,
           el('td', { style: 'min-width:15rem' }, el('div', { text: m.mittari }), el('div', { class: 'note', text: m.osa }), m.lahde ? el('div', { class: 'note', style: 'font-size:11.5px', text: 'Lähde: ' + m.lahde }) : null),
           el('td', { text: m.valitavoite, style: 'min-width:8.5em' }), el('td', { text: m.tavoite_2030, style: 'min-width:7em' }),
           YEARS_T.map((y) => el('td', { class: 'num' }, num(m, y))),
           el('td', null, pill(tila(m))),
-          el('td', null, el('input', { type: 'text', id: 'o-' + m.id, 'aria-label': 'Omistaja: ' + m.mittari, value: m.omistaja || '', disabled: !canWrite, style: 'width:100%;min-width:13em', onchange: (e) => save('mittarit/' + m.id, { omistaja: e.target.value }) }))))))),
+          el('td', null, el('input', { type: 'text', id: 'o-' + m.id, 'aria-label': 'Omistaja: ' + m.mittari, value: m.omistaja || '', disabled: !canWrite, style: 'width:100%;min-width:13em', onchange: (e) => save('mittarit/' + m.id, { omistaja: e.target.value }) })),
+          el('td', null, el('button', { type: 'button', class: 'ghost small', disabled: !canWrite, 'aria-label': 'Muokkaa mittaria ' + m.mittari, onclick: () => { mEdit = m.id; confirmDel = null; render(); setTimeout(() => { const q = document.getElementById('mittari-lomake'); if (q) q.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30); } }, 'Muokkaa'))))))),
       el('p', { class: 'note', text: 'Kasvatti = vähintään kolme kautta VPS:ssä 15–21-vuotiaana (UEFA:n määritelmä). Lähtötaso 2024–2026 Palloliiton seuraprofiilista; seura päättää oman määritelmänsä ja voi korjata luvut.' }));
     const groups = [...new Set(T.map((t) => t.mahdollistaja))];
     const tt = el('div', { class: 'card' }, el('h3', { text: 'Toimenpiteet strategian mahdollistajittain' }),
@@ -564,7 +675,7 @@ nav a[hidden] { display: none !important; }
           el('td', null, el('select', { id: 't-' + t.id, 'aria-label': 'Tila: ' + t.toimenpide, disabled: !canWrite, onchange: (e) => save('toimenpiteet/' + t.id, { tila: e.target.value }) }, TOIM_TILAT.map((o) => el('option', { value: o, selected: (t.tila || 'Tieto puuttuu') === o }, o)))),
           el('td', null, el('input', { type: 'text', id: 'tv-' + t.id, 'aria-label': 'Vastuu: ' + t.toimenpide, value: t.vastuu || '', disabled: !canWrite, style: 'width:10em', onchange: (e) => save('toimenpiteet/' + t.id, { vastuu: e.target.value }) })),
           el('td', null, el('input', { type: 'text', id: 'th-' + t.id, 'aria-label': 'Huomio: ' + t.toimenpide, value: t.huomio || '', disabled: !canWrite, style: 'width:14em', onchange: (e) => save('toimenpiteet/' + t.id, { huomio: e.target.value }) }))))))))));
-    return el('div', { style: 'display:flex;flex-direction:column;gap:16px' }, pageHead('Strategia 2030', 'Tavoitteet, mittarit ja toimenpiteet. Kirjaa toteumat kahdesti vuodessa ennen siirtoikkunoita.'), mt, tt);
+    return el('div', { style: 'display:flex;flex-direction:column;gap:16px' }, pageHead('Strategia 2030', 'Tavoitteet, mittarit ja toimenpiteet. Kirjaa toteumat kahdesti vuodessa ennen siirtoikkunoita.'), mEdit ? mittariLomake(M) : null, mt, mittariKaaviot(M), tt);
   }
 
   // ---------- Pelipaikat: tila, kenttäkuva, aikajana, päätösjono ----------
@@ -1270,16 +1381,16 @@ nav a[hidden] { display: none !important; }
   }
 
   function HALL() { return !!(window.__vps && window.__vps.rooli === 'hallitus'); }
-  const VIEWS = { hallitus: viewHallitus, strategia: viewStrategia, sarjat: viewSarjat, pelipaikat: viewPelipaikat, paatokset: viewPaatokset };
-  const current = () => { const h = location.hash.slice(1); if (HALL() && h !== 'strategia') return 'hallitus'; return VIEWS[h] ? h : 'hallitus'; };
+  const VIEWS = { hallitus: viewHallitus, strategia: viewStrategia, sarjat: viewSarjat, pelipaikat: viewPelipaikat, paatokset: viewPaatokset, kayttajat: viewKayttajat };
+  const current = () => { const h = location.hash.slice(1); if (HALL() && h !== 'strategia') return 'hallitus'; if (h === 'kayttajat' && !UTJ()) return 'hallitus'; return VIEWS[h] ? h : 'hallitus'; };
   function render() {
     const a = document.activeElement;
     if (a && $view.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.closest('form') == null) { pendingRender = true; return; }
     if (a && a.closest && a.closest('form') && $view.contains(a)) { pendingRender = true; return; }
     pendingRender = false;
     const v = current();
-    document.querySelectorAll('nav a').forEach((n) => { if (n.dataset.view === v) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current'); n.hidden = HALL() && !['hallitus', 'strategia'].includes(n.dataset.view); });
-    const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : ['kortit'];
+    document.querySelectorAll('nav a').forEach((n) => { if (n.dataset.view === v) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current'); n.hidden = (HALL() && !['hallitus', 'strategia'].includes(n.dataset.view)) || (n.dataset.view === 'kayttajat' && !UTJ()); });
+    const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : v === 'kayttajat' ? [] : ['kortit'];
     if (!db) { return; }
     if (need.some((k) => S[k] === null)) { $view.replaceChildren(el('div', { class: 'empty', text: 'Ladataan…' })); return; }
     $view.replaceChildren(VIEWS[v]()); const dl = explainDialog(); if (dl) { $view.append(dl); setTimeout(() => { const c = document.getElementById('dlg-close'); if (c) c.focus(); }, 0); }
