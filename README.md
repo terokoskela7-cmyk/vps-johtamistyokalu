@@ -15,7 +15,7 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 5. `007_pelaajapolun_mittarit.sql` – Palloliiton tapahtumien mittarit (Huuhkaja- ja Helmariturnaus, maajoukkueet, Tähtitarha)
 6. `008_pelaajapolun_maaritelmat.sql` – laskentasääntö: eri pelaajat vuodessa, ikävaiheet
 7. `009_pelaajapolun_historia.sql` – pelaajapolun toteumat 2020–2026 Portaat-aineistosta
-8. `010_talous.sql` – suojattu talous-kokoelma (pelaajakohtaiset kustannukset vain urheilutoimelle ja toiminnanjohtajalle) ja pelaajabudjetti
+8. `010_talous.sql` – suojattu talous-kokoelma (pelaajakohtaiset kustannukset vain urheilutoimelle ja toimitusjohtajalle) ja pelaajabudjetti
 9. Pelaajien markkina-arvot: seuran sisäinen tiedosto `011_arvot_data.sql`, toimitetaan erikseen (ei tässä repossa)
 10. `012_akatemia_rekrytointi.sql` – kokoelmat akatemia (valmennuspäällikkö) ja rekrytointi (analyytikko) sekä niiden SQL-näkymät
 11. Akatemian esitäyttö: seuran sisäinen tiedosto `013_akatemia_data.sql` (alaikäisten nimiä), toimitetaan erikseen
@@ -51,7 +51,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 | 4.11.2026 | Talous ja arvo -näkymä: joukkueen arvo, hallittu arvo, x ja y (myös valmennus ja ympäristö), myyntipotentiaaliset nuoret, pelaajakohtainen kannattavuus, arvon määrittely; koosteet hallitusraporttiin | 010, 011 |
 | 4.11.2026 | Pelijärjestelmät 4-3-3, 4-2-3-1, 3-4-3, 3-4-2-1, 3-5-2, 5-3-2; pelipaikkojen vapaa siirto kentällä; aloittajatarve järjestelmästä; kortin Arvo-näkymä | – |
 | urheilutoimi, valmennus, analyytikko | kaiken | kaiken |
-| toiminnanjohtaja | kaiken | kaiken paitsi poistot |
+| toimitusjohtaja (tunnus `toiminnanjohtaja`) | kaiken, myös pelaajakohtaiset kustannukset | kaiken paitsi pelaajien ja mittarien poistot |
 | hallitus | strategian ja julkaistun raportin, ei pelaajia | ei mitään |
 
 ## SQL-näkymät harjoitteluun

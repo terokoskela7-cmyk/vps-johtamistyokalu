@@ -389,7 +389,7 @@ nav a[hidden] { display: none !important; }
     $('login').hidden = true;
     document.documentElement.dataset.rooli = rooli;
     const foot = document.querySelector('.side .foot');
-    if (foot) { const ub = document.createElement('div'); ub.className = 'userbar'; ub.innerHTML = '<span></span><button type="button">Kirjaudu ulos</button>'; ub.firstChild.textContent = s.user.email + ' · ' + rooli; ub.lastChild.onclick = async () => { await sb.auth.signOut(); location.reload(); }; foot.append(ub); }
+    if (foot) { const ub = document.createElement('div'); ub.className = 'userbar'; ub.innerHTML = '<span></span><button type="button">Kirjaudu ulos</button>'; ub.firstChild.textContent = s.user.email + ' · ' + (rooli === 'toiminnanjohtaja' ? 'toimitusjohtaja' : rooli); ub.lastChild.onclick = async () => { await sb.auth.signOut(); location.reload(); }; foot.append(ub); }
     readyResolve();
   }
 
@@ -642,7 +642,7 @@ nav a[hidden] { display: none !important; }
   }
 
   // --- Käyttäjät ja roolit (vain urheilutoimenjohtaja) ---
-  const KROOLIT = [['urheilutoimi', 'Urheilutoimi (omistaja)'], ['valmennus', 'Valmennus'], ['analyytikko', 'Analyytikko'], ['toiminnanjohtaja', 'Toiminnanjohtaja'], ['hallitus', 'Hallitus (vain raportti)']];
+  const KROOLIT = [['urheilutoimi', 'Urheilutoimi (omistaja)'], ['valmennus', 'Valmennus'], ['analyytikko', 'Analyytikko'], ['toiminnanjohtaja', 'Toimitusjohtaja'], ['hallitus', 'Hallitus (vain raportti)']];
   const kuLoad = async () => { KU.loading = true; render(); const { data, error } = await window.__vps.rpc('listaa_kayttajat'); KU.loading = false; KU.err = error ? (error.message || String(error)) : null; KU.list = error ? [] : data; render(); };
   const kuSet = async (email, r) => { const { error } = r ? await window.__vps.rpc('aseta_rooli', { p_email: email, p_rooli: r }) : await window.__vps.rpc('poista_rooli', { p_email: email }); if (error) { toast(error.message || String(error)); return false; } toast(r ? 'Rooli tallennettu' : 'Rooli poistettu'); confirmDel = null; await kuLoad(); return true; };
   function viewKayttajat() {
@@ -673,7 +673,7 @@ nav a[hidden] { display: none !important; }
           el('button', { type: 'submit' }, 'Tallenna'))),
       el('div', { class: 'card' }, el('h3', { text: 'Mitä rooli saa tehdä' }), el('div', { class: 'tw' }, el('table', null,
         el('thead', null, el('tr', null, ['Rooli', 'Näkee', 'Muuttaa'].map((h) => el('th', { text: h })))),
-        el('tbody', null, [['Urheilutoimi', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken'], ['Valmennus, analyytikko', 'kaiken paitsi pelaajakohtaiset kustannukset', 'kaiken paitsi kustannukset; valmennuspäällikkö omistaa Akatemia ja polku -näkymän, analyytikko Rekrytoinnin'], ['Toiminnanjohtaja', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken paitsi pelaajien ja mittarien poistot'], ['Hallitus', 'strategian ja julkaistun raportin koosteet, ei pelaajia eikä palkkoja', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
+        el('tbody', null, [['Urheilutoimi', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken'], ['Valmennus, analyytikko', 'kaiken paitsi pelaajakohtaiset kustannukset', 'kaiken paitsi kustannukset; valmennuspäällikkö omistaa Akatemia ja polku -näkymän, analyytikko Rekrytoinnin'], ['Toimitusjohtaja', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken paitsi pelaajien ja mittarien poistot'], ['Hallitus', 'strategian ja julkaistun raportin koosteet, ei pelaajia eikä palkkoja', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
   }
   function viewStrategia() {
     const M = sorted(S.mittarit, 'jarj'), T = sorted(S.toimenpiteet, 'jarj');
@@ -1570,8 +1570,8 @@ nav a[hidden] { display: none !important; }
     const xy = el('div', { class: 'card', id: 'tal-xy' }, el('h3', { text: 'Investointi x ja arvonluonti y' }),
       el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))' },
         lab('Pelaajabudjetti ' + K + ' (€)', num('tal-budjetti', A.budjetti, (v) => save('asetukset/talous', { budjetti: v })), 'Palkat, lomarahat, bonukset, edut'),
-        lab('Valmennus ja tukihenkilöstö ' + K + ' (€)', TALO() ? num('tal-valm', I.valmennus, (v) => save('talous/investoinnit', { valmennus: v })) : el('span', { text: 'vain urheilutoimi ja toiminnanjohtaja' }), 'Valmentajat, analyytikot, fysio, lääkäri'),
-        lab('Olosuhteet ja ympäristö ' + K + ' (€)', TALO() ? num('tal-ymp', I.ymparisto, (v) => save('talous/investoinnit', { ymparisto: v })) : el('span', { text: 'vain urheilutoimi ja toiminnanjohtaja' }), 'Kentät, kuntosali, analytiikka, akatemian ja edustuksen välinen porras'),
+        lab('Valmennus ja tukihenkilöstö ' + K + ' (€)', TALO() ? num('tal-valm', I.valmennus, (v) => save('talous/investoinnit', { valmennus: v })) : el('span', { text: 'vain urheilutoimi ja toimitusjohtaja' }), 'Valmentajat, analyytikot, fysio, lääkäri'),
+        lab('Olosuhteet ja ympäristö ' + K + ' (€)', TALO() ? num('tal-ymp', I.ymparisto, (v) => save('talous/investoinnit', { ymparisto: v })) : el('span', { text: 'vain urheilutoimi ja toimitusjohtaja' }), 'Kentät, kuntosali, analytiikka, akatemian ja edustuksen välinen porras'),
         lab('Myyntitulot ' + K + ' (€)', num('tal-myynnit', (A.myynnit || {})[K], (v) => save('asetukset/talous', { myynnit: Object.assign({}, A.myynnit || {}, { [K]: v }) })), A.myynnit_lahde || 'Siirtosummat ja jälleenmyyntiosuudet'),
         lab('Sarjapaikan arvo / kausi (€)', num('tal-sp', A.sarjapaikka, (v) => save('asetukset/talous', { sarjapaikka: v })), 'Arvio 500–800 k€, tarkistettava')),
       el('div', { class: 'formula', text: 'y = omien pelaajien arvonmuutos ' + eur(T.muutos) + ' + myyntitulot ' + eur(T.myynnit) + ' = ' + eur(T.y) + '   ·   y / x (pelaajabudjetti) = ' + pctS(T.yx, 1) + (T.yxL != null ? '   ·   y / x (pelaajat + valmennus + ympäristö ' + eur(T.xL) + ') = ' + pctS(T.yxL, 1) : '') }),
@@ -1587,7 +1587,7 @@ nav a[hidden] { display: none !important; }
     // pelaajakohtainen kannattavuus
     const rows = T.L.slice().sort((a, b) => (T.arvo(b) || 0) - (T.arvo(a) || 0));
     const kann = TALO() ? el('div', { class: 'card', id: 'tal-pelaajat' }, el('h3', { text: 'Pelaajakohtainen kannattavuus' }),
-      el('p', { class: 'note', text: 'Kirjaa pelaajan vuosikustannus (palkka, sivukulut, asunto, agenttipalkkio). Luvut näkyvät vain urheilutoimelle ja toiminnanjohtajalle. Hallitus näkee vain summan. Urheilullinen tuotto = peliaika, taloudellinen tuotto = hallittu arvo ja arvonnousu.' }),
+      el('p', { class: 'note', text: 'Kirjaa pelaajan vuosikustannus (palkka, sivukulut, asunto, agenttipalkkio). Luvut näkyvät vain urheilutoimelle ja toimitusjohtajalle. Hallitus näkee vain summan. Urheilullinen tuotto = peliaika, taloudellinen tuotto = hallittu arvo ja arvonnousu.' }),
       el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Pelaaja', 'Ikä', 'Laina', 'Peliaika', 'Sopimus', 'Markkina-arvo', 'Muutos', 'Palkka ja kulut / v (€)', 'Agentti / v (€)', 'Bonukset enintään / v (€)', 'Bonuksen ehto', 'Arvo / kustannus', 'Peliaika / 10 k€'].map((h, i) => el('th', { class: [1, 3, 5, 6, 11, 12].includes(i) ? 'num' : null, text: h })))),
         el('tbody', null, rows.map((x) => { const k = talKust(x.id), a = T.arvo(x), ed = numOrNull(x.arvo_ed), td = T.tdoc(x.id);
           return el('tr', null, el('td', { text: x.nimi }), el('td', { class: 'num', text: T.age(x) == null ? '—' : String(T.age(x)) }), el('td', { text: x.laina ? 'laina' : '' }), el('td', { class: 'num', text: x._osuus == null ? '—' : pctS(x._osuus) }), el('td', { text: x.sopimus || '—' }),
@@ -1599,7 +1599,7 @@ nav a[hidden] { display: none !important; }
             el('td', { class: 'num', text: k && a != null && !x.laina && Number(x.sopimus) > K ? fmt(a / k, 1) : '—', title: 'Hallittu arvo (oma pelaaja, sopimusta yli kauden) jaettuna vuosikustannuksella' }),
             el('td', { class: 'num', text: k && x._osuus != null ? fmt(100 * x._osuus / (k / 10000), 1) + ' %' : '—' })); }),
           el('tr', { class: 'sum' }, el('td', { colspan: '7', text: 'Kirjattu ' + T.kustN + ' / ' + T.L.length + ' pelaajalta' }), el('td', { class: 'num', text: eur(T.kustSum) }), el('td', { colspan: '5', class: 'note', text: T.budjetti ? pctS(T.kustSum / T.budjetti) + ' pelaajabudjetista (palkat ja kulut)' : '' }))))))
-      : el('div', { class: 'card', id: 'tal-pelaajat' }, el('h3', { text: 'Pelaajakohtainen kannattavuus' }), el('p', { class: 'note', text: 'Pelaajakohtaiset kustannukset näkyvät vain urheilutoimelle ja toiminnanjohtajalle.' }));
+      : el('div', { class: 'card', id: 'tal-pelaajat' }, el('h3', { text: 'Pelaajakohtainen kannattavuus' }), el('p', { class: 'note', text: 'Pelaajakohtaiset kustannukset näkyvät vain urheilutoimelle ja toimitusjohtajalle.' }));
     return el('div', { style: 'display:flex;flex-direction:column;gap:18px' },
       pageHead('Talous ja joukkueen arvo', 'Paljonko pelaajaryhmä on arvoltaan, kuka arvon omistaa ja tuottaako investointi arvoa. Kausi ' + K + '.'),
       el('div', { class: 'row jumps' }, el('span', { class: 'note', text: 'Siirry:' }), ['tal-xy|x ja y', 'tal-nuoret|Nuoret', 'tal-pelaajat|Pelaajat', ...(TALO() ? ['tal-jm|Jälleenmyynnit'] : []), 'tal-maaritelma|Arvon määrittely'].map((v) => { const [id, t] = v.split('|'); return el('button', { type: 'button', class: 'ghost jump', onclick: () => { const q = document.getElementById(id); if (q) q.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, t); })),
