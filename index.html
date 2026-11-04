@@ -474,7 +474,7 @@ nav a[hidden] { display: none !important; }
   const KTYYPIT = ['Hankinta', 'Jatkosopimus', 'Laina ulos', 'Laina sisään', 'Lähtö / myynti', 'Nosto omasta polusta'];
   const JALKI = ['Odottaa', 'Saavutettu', 'Osittain', 'Ei saavutettu'];
   const S = { mittarit: null, toimenpiteet: null, paikat: null, kortit: null, kaudet: null, pelaajat: null, skenaariot: null, asetukset: null, vahvuus: null, wyscout: null, hallitusraportti: null, talous: null, akatemia: null, rekrytointi: null };
-  const F = { kausi: 2027, skenaario: null, chip: 'Sopimus', sp: 'Kaikki', osa: 'syksy', hh: false, ik: 'Kaikki', poik: false, nimet: false, ptila: 'Lopetti tai siirtyi', psynt: 'Kaikki' };
+  const F = { kausi: 2027, skenaario: null, chip: 'Sopimus', sp: 'Kaikki', osa: 'syksy', hh: false, ik: 'Kaikki', poik: true, nimet: false, ptila: 'Lopetti tai siirtyi', psynt: 'Kaikki' };
   let db = null, me = null, canWrite = true, pendingRender = false, openSlot = null, confirmDel = null, mEdit = null;
   const KU = { list: null, loading: false, err: null };
   const UTJ = () => !!(window.__vps && window.__vps.rooli === 'urheilutoimi');
@@ -1299,11 +1299,53 @@ nav a[hidden] { display: none !important; }
     const cur = F.sjTab || 'sj-yhteenveto';
     const KK = (S.kaudet || []).slice().sort((a, b) => b.kausi - a.kausi)[0];
     const yht = sjYhteenveto(KK); const gridEl = root.querySelector(':scope > .grid');
-    if (cur === 'sj-yhteenveto') { if (gridEl) gridEl.replaceWith(yht); else root.querySelector('.jumps') && root.querySelector('.jumps').after(yht); } else yht.remove();
+    if (cur === 'sj-yhteenveto') { if (gridEl) gridEl.replaceWith(yht); else root.querySelector('.jumps') && root.querySelector('.jumps').after(yht); }
+    else { if (gridEl) gridEl.remove(); const sec = root.querySelector('#' + cur); const ins = sec ? sjInsight(cur, KK) : null; if (ins) sec.before(ins); }
     const tabs = el('div', { class: 'subtabs', role: 'tablist', 'aria-label': 'Sarjat-näkymän osiot' }, SJ.filter(([id]) => id === 'sj-yhteenveto' || root.querySelector('#' + id)).map(([id, l]) => el('button', { type: 'button', role: 'tab', class: cur === id ? 'on' : '', 'aria-selected': String(cur === id), onclick: () => { F.sjTab = id; render(); } }, l)));
     const jr = root.querySelector('.jumps'); if (jr) jr.replaceWith(tabs);
     SJ.forEach(([id]) => { const n = root.querySelector('#' + id); if (n && id !== cur) n.remove(); });
     return root;
+  }
+  // Välilehtikohtainen havainto: mitä data kertoo ja mitä tehdään (valmennuspäällikkö)
+  function sjInsight(id, K) {
+    const IK = K.ikaluokat || [], ALL = (K.sarjat || []).filter((r) => r.ottelut), SY = ALL.filter((r) => !r.hh && r.kausiosa === 'syksy'), med = (a) => { const v = a.filter((x) => x != null).sort((x, y) => x - y); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
+    const lyh = (r) => r.ikaluokka + ' ' + String(r.sarja || '').replace(r.ikaluokka + ' ', '').replace('Liiga Pohjoinen', 'Liiga');
+    const best = (ik, osa) => ALL.filter((r) => r.ikaluokka === ik && !r.hh && r.kausiosa === (osa || 'syksy')).sort((a, b) => (a.taso_nro ?? 99) - (b.taso_nro ?? 99) || (a.sija ?? 99) - (b.sija ?? 99))[0];
+    const lst = (a, n) => a.slice(0, n || 6).join(', ') + (a.length > (n || 6) ? ' ja ' + (a.length - (n || 6)) + ' muuta' : '');
+    let h = null;
+    if (id === 'sj-portaikko') { const miss = IK.filter((r) => !r.syksy_ylin), one = miss.filter((r) => (r.joukkueita || 0) <= 1), many = IK.filter((r) => (r.joukkueita || 0) >= 3);
+      h = { f: 'Ylin taso puuttuu ' + miss.length + ' ikäluokasta (' + lst(miss.map((r) => r.ikaluokka)) + '). Niistä ' + one.length + ':ssa VPS:llä on vain yksi joukkue. Kun joukkueita on vähintään kolme, ylin taso on ' + many.filter((r) => r.syksy_ylin).length + ' / ' + many.length + ' ikäluokassa.',
+        a: one.length ? 'Yhden joukkueen ikäluokkiin kaksi joukkuetta (ylin taso + kehitys) tai yhteisjoukkue kumppanin kanssa. Siihen asti parhaat pelaavat vanhempien ylimmällä tasolla.' : 'Tarkista puuttuvien ikäluokkien pelaajamäärä ja valmentajat.' }; }
+    if (id === 'sj-joukkueet') { const ar = SY.map((r) => [r, arvio(r)[0]]), cnt = (L) => { const m = {}; L.forEach((t) => { m[t] = (m[t] || 0) + 1; }); return Object.entries(m).map(([t, n]) => t + (n > 1 ? ' (' + n + ' joukkuetta)' : '')); }, he = cnt(ar.filter((x) => x[1] === 'Liian helppo?').map((x) => lyh(x[0]))), ko = cnt(ar.filter((x) => x[1] === 'Liian kova?').map((x) => lyh(x[0])));
+      const lu = ALL.filter((r) => r.luovutukset > 0).map((r) => lyh(r) + ' (' + r.luovutukset + ')'), tk = med(SY.map((r) => r.tiukat_pct));
+      h = { f: 'Syksyllä ' + ar.filter((x) => x[1] === 'Sopiva').length + ' / ' + ar.length + ' joukkuetta pelasi omalla tasollaan. Liian helppo: ' + (he.length ? lst(he) : 'ei yhtään') + '. Liian kova: ' + (ko.length ? lst(ko) : 'ei yhtään') + '.' + (tk != null ? ' Tiukkoja otteluita (ero enintään 1 maali) mediaanina ' + tk + ' %.' : '') + (lu.length ? ' Luovutuksia: ' + lst(lu) + '.' : ''),
+        a: 'Liian helpot ylemmäs tai parhaat pelaajat ylöspäin, liian kovat alemmas tai pelaajia lisää. Luovutukset kertovat pelaaja- tai valmentajapulasta. Lista näyttää oletuksena vain poikkeamat.' }; }
+    if (id === 'sj-tasoerot') { const d = (S.vahvuus || []).find((x) => String(x.kausi) === String(K.kausi)); if (!d) return null;
+      const st = (d.ikaluokat || []).flatMap((x) => x.tasot.map((t, i) => (t.askel == null || i === 0 ? null : { ik: x.ik, a: t.nimi, b: x.tasot[i - 1].nimi, v: t.askel, k: Math.min(t.kytkevia || 0, x.tasot[i - 1].kytkevia || 0) })).filter(Boolean)).filter((q) => q.k >= 3).sort((p, q) => q.v - p.v);
+      if (!st.length) return null; const m = med(st.map((q) => q.v));
+      h = { f: 'Suurimmat tasohypyt: ' + st.slice(0, 3).map((q) => q.ik + ' ' + q.a + ' → ' + q.b + ' +' + fmt(q.v, 1) + ' maalia / ottelu').join(', ') + '. Tyypillinen tasoero on ' + fmt(m, 1) + ' maalia ottelua kohden (vähintään 3 kytkevää joukkuetta).',
+        a: 'Ison hypyn kohdalla nosta joukkue vasta, kun se on omalla tasollaan kärjessä (Liian helppo?), tai pelaa kevät välitasolla. Pieni ero tarkoittaa, että nousu on realistinen jo nyt.' }; }
+    if (id === 'sj-ikaluokat') { const up = IK.filter((r) => !r.kevat_ylin && r.syksy_ylin).map((r) => r.ikaluokka), dn = IK.filter((r) => r.kevat_ylin && !r.syksy_ylin).map((r) => r.ikaluokka);
+      const hard = IK.filter((r) => r.syksy_ylin).map((r) => best(r.ikaluokka)).filter((b) => b && b.karki_max > 0 && 100 * b.karki_pisteet / b.karki_max < 25).map((b) => b.ikaluokka + ' (' + Math.round(100 * b.karki_pisteet / b.karki_max) + ' %)');
+      h = { f: 'Kevät → syksy: ylimmälle tasolle nousi ' + (up.length ? lst(up) : 'ei yksikään') + ', putosi ' + (dn.length ? lst(dn) : 'ei yksikään') + '. Ylimmällä tasolla kärkeä vastaan alle 25 % pisteistä: ' + (hard.length ? lst(hard) : 'ei yhtään') + '.',
+        a: hard.length ? 'Ylimmän tason joukkueet, jotka eivät pärjää kärjelle: vahvista ryhmää (pelaajat vanhemmista tai alemmasta joukkueesta) ennen kevään sarjaa.' : 'Ylimmän tason joukkueet pärjäävät myös kärkeä vastaan: seuraava askel on pelaajien nosto ylöspäin.' }; }
+    if (id === 'sj-pysyvyys') { const P = K.pysyvyys || {}, low = (P.syntymavuosittain || []).filter((r) => r.pelaajia >= 20 && r.osuus_pct < 75).sort((a, b) => a.osuus_pct - b.osuus_pct);
+      h = { f: 'Pysyvyys ' + fmt(P.osuus_pct, 1) + ' % (tavoite 75 %). Alle tavoitteen: ' + (low.length ? low.map((r) => r.synt + ' (' + (K.kausi - r.synt) + ' v) ' + fmt(r.osuus_pct, 1) + ' %').join(', ') : 'ei yhtään syntymävuotta') + '.' + (low.length ? ' Pudotus osuu ' + Math.min(...low.map((r) => K.kausi - r.synt)) + '–' + Math.max(...low.map((r) => K.kausi - r.synt)) + ' vuoden ikään.' : ''),
+        a: 'Tee heikoimmille syntymävuosille suunnitelma: montako joukkuetta seuraavaan ikäluokkaan, rooli jokaiselle pelaajalle ja kuka seuraa lopettamisaikeita. Syyt Putki- ja Pelaajat-välilehdiltä.' }; }
+    if (id === 'sj-putki') { const PU = K.putki || {}, T = PU.tilat_syntymavuosittain || [], keys = ['Nousi parempaan joukkueeseen', 'Pysyi samalla portaalla', 'Siirtyi alempaan joukkueeseen', 'Lopetti tai siirtyi'];
+      const tot = keys.map((k) => T.reduce((a, r) => a + (r[k] || 0), 0)), n = tot.reduce((a, b) => a + b, 0) || 1;
+      const worst = T.filter((r) => keys.reduce((a, k) => a + (r[k] || 0), 0) >= 20).map((r) => [r.synt, 100 * (r['Lopetti tai siirtyi'] || 0) / keys.reduce((a, k) => a + (r[k] || 0), 0)]).sort((a, b) => b[1] - a[1])[0];
+      const LJ = (PU.lopettajat_vs_jatkajat || []).filter((r) => r.lopetti && r.jatkoi && r.lopetti.pelaajia >= 5), lo = med(LJ.map((r) => r.lopetti.ottelut_md)), ja = med(LJ.map((r) => r.jatkoi.ottelut_md));
+      h = { f: 'Alle 19-vuotiaista ' + Math.round(100 * tot[0] / n) + ' % nousi parempaan joukkueeseen, ' + Math.round(100 * tot[1] / n) + ' % pysyi, ' + Math.round(100 * tot[2] / n) + ' % siirtyi alempaan ja ' + Math.round(100 * tot[3] / n) + ' % lopetti tai siirtyi muualle.' + (worst ? ' Eniten lopetti syntymävuosi ' + worst[0] + ' (' + Math.round(worst[1]) + ' %).' : '') + (lo != null ? ' Lopettaneet pelasivat mediaanina ' + lo + ' ottelua, jatkaneet ' + ja + '.' : ''),
+        a: 'Vähän pelaavat lopettavat: jokaiselle pelaajalle peliaikalupaus ja tarvittaessa toinen joukkue, jossa hän pelaa. Alempaan siirtyneiden kanssa keskustelu syystä ja paluun polusta.' }; }
+    if (id === 'pelaajalista') { const L = K.putki_pelaajat || [], q = L.filter((p) => p.t === 'Lopetti tai siirtyi' && (p.o1 || 0) <= 5), up = L.filter((p) => p.t === 'Nousi parempaan joukkueeseen');
+      h = { f: q.length + ' pelaajaa lopetti tai siirtyi muualle pelattuaan edellisellä kaudella enintään 5 ottelua. ' + up.length + ' pelaajaa nousi parempaan joukkueeseen.',
+        a: 'Avaa lista, suodata tila "Lopetti tai siirtyi" ja käy vähän pelanneet läpi joukkueiden valmentajien kanssa: syy, ja voiko pelaajan saada takaisin. Alaikäisten tiedot vain seuran sisäiseen käyttöön.' }; }
+    if (id === 'sj-maalit') { const M = K.maalit || [], dep = M.filter((m) => m.paras_osuus_pct > 30).sort((a, b) => b.paras_osuus_pct - a.paras_osuus_pct), wide = M.filter((m) => m.paras_osuus_pct < 15);
+      h = { f: dep.length + ' / ' + M.length + ' joukkuetta on riippuvainen yhdestä maalintekijästä (yli 30 % maaleista)' + (dep.length ? ': ' + lst(dep.map((m) => m.sarja + ' ' + Math.round(m.paras_osuus_pct) + ' %'), 4) : '') + '. Maalit jakautuvat laajasti (alle 15 %) ' + wide.length + ' joukkueessa.',
+        a: 'Riippuvaisissa joukkueissa paras maalintekijä on usein valmis haastamaan ylemmässä joukkueessa. Tarkista hänen polkunsa ja anna muille vastuuta maalinteosta.' }; }
+    if (!h) return null;
+    return el('div', { class: 'card insight warn sjins' }, el('div', { class: 'eyebrow', text: 'Havainto' }), el('p', { style: 'margin:2px 0 0;font-size:14px;line-height:1.5', text: h.f }), el('div', { class: 'todo' }, el('b', { text: 'Toimenpide (valmennuspäällikkö): ' }), h.a));
   }
   // Yhteenveto: kolme havaintoa toimenpiteineen + ikäluokat yhdellä silmäyksellä
   function sjYhteenveto(K) {
@@ -1401,7 +1443,7 @@ nav a[hidden] { display: none !important; }
     };
 
     // --- Tasoarvion hajontakuva
-    const rows = ALL.filter((r) => (F.sp === 'Kaikki' || r.sukupuoli === F.sp) && (F.osa === 'Koko kausi' || r.kausiosa === F.osa) && (F.hh || !r.hh) && (F.ik === 'Kaikki' || r.ikaluokka === F.ik) && (!F.poik || /Liian/.test(arvio(r)[0])));
+    const rows = ALL.filter((r) => (F.sp === 'Kaikki' || r.sukupuoli === F.sp) && (F.osa === 'Koko kausi' || r.kausiosa === F.osa) && (F.hh || !r.hh) && (F.ik === 'Kaikki' || r.ikaluokka === F.ik) && (F.poik === false || /Liian/.test(arvio(r)[0])));
     const order = (r) => [r.sukupuoli === 'Pojat' ? 0 : 1, r.ika || 0, r.taso_nro, r.sija || 99];
     rows.sort((a, b) => { const x = order(a), y = order(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; });
     const scatter = () => {
@@ -1435,7 +1477,7 @@ nav a[hidden] { display: none !important; }
       seg('sp', [['Kaikki', 'Kaikki'], ['Pojat', 'Pojat'], ['Tytöt', 'Tytöt']], 'Sukupuoli'),
       seg('osa', [['kevät', 'Kevät'], ['syksy', 'Syksy'], ['Koko kausi', 'Koko kausi']], 'Kausi'),
       el('label', { class: 'seg' }, el('span', { class: 'seglbl', text: 'Ikäluokka' }), el('select', { id: 'sj-ik', onchange: (e) => { F.ik = e.target.value; e.target.blur(); render(); } }, ['Kaikki', ...ikOpts].map((o) => el('option', { value: o, selected: F.ik === o }, o)))),
-      el('label', { class: 'chk' }, el('input', { type: 'checkbox', id: 'sj-poik', checked: F.poik, onchange: (e) => { F.poik = e.target.checked; e.target.blur(); render(); } }), 'Vain liian helppo tai kova'),
+      el('label', { class: 'chk' }, el('input', { type: 'checkbox', id: 'sj-poik', checked: F.poik !== false, onchange: (e) => { F.poik = e.target.checked; e.target.blur(); render(); } }), 'Vain liian helppo tai kova'),
       el('label', { class: 'chk' }, el('input', { type: 'checkbox', id: 'sj-hh', checked: F.hh, onchange: (e) => { F.hh = e.target.checked; e.target.blur(); render(); } }), 'Huuhkaja- ja Helmariliiga mukana'));
 
     const joukkueet = el('div', { class: 'card', id: 'sj-joukkueet' }, el('h3', { text: 'Joukkueet: onko taso oikea?' }), filters,
@@ -1534,8 +1576,9 @@ nav a[hidden] { display: none !important; }
                 el('td', { text: p.j1 }), el('td', { class: 'num', text: fmt(p.o1) }), el('td', { class: 'num', text: fmt(p.y1) }), el('td', { text: p.j2 || '—' }), el('td', { class: 'num', text: p.o2 == null ? '—' : fmt(p.o2) }), el('td', { class: 'num', text: p.y2 == null ? '—' : fmt(p.y2) }))))))] : null); })(),
       el('div', { class: 'card', id: 'sj-maalit' }, el('h3', { text: 'Maalinteko joukkueittain' }),
         el('p', { class: 'note', text: 'Parhaan osuus = joukkueen parhaan maalintekijän osuus maaleista. Yli 30 % kertoo riippuvuudesta yhdestä pelaajasta, alle 15 % siitä, että maalit jakautuvat laajasti.' }),
+        el('label', { class: 'chk' }, el('input', { type: 'checkbox', id: 'sj-maalk', checked: !!F.maalKaikki, onchange: (e) => { F.maalKaikki = e.target.checked; e.target.blur(); render(); } }), 'Näytä kaikki joukkueet (oletuksena vain yli 30 % ja alle 15 %)'),
         el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, el('th', { text: 'Sarja' }), el('th', { text: 'Joukkue' }), el('th', { class: 'num', text: 'Maalit' }), el('th', { class: 'num', text: 'Maalintekijöitä' }), el('th', { class: 'num', text: 'Parhaan osuus' }), el('th', { text: 'Parhaat maalintekijät' }))),
-          el('tbody', null, (K.maalit || []).slice().sort((a, b) => String(a.sarja).localeCompare(String(b.sarja), 'fi', { numeric: true })).map((m) => el('tr', null, el('td', { text: m.sarja }), el('td', { text: m.joukkue }), el('td', { class: 'num', text: fmt(m.maalit) }), el('td', { class: 'num', text: fmt(m.maalintekijoita) }), el('td', { class: 'num', text: fmt(m.paras_osuus_pct, 1) + ' %' }), el('td', { class: 'note', text: ((K.maalintekijat || []).find((x) => x.joukkue === m.joukkue && x.sarja === m.sarja) || { parhaat: [] }).parhaat.map((p) => p.nimi + ' ' + p.maalit).join(' · ') || '—' }))))))),
+          el('tbody', null, (K.maalit || []).filter((m) => F.maalKaikki || m.paras_osuus_pct > 30 || m.paras_osuus_pct < 15).slice().sort((a, b) => b.paras_osuus_pct - a.paras_osuus_pct).map((m) => el('tr', null, el('td', { text: m.sarja }), el('td', { text: m.joukkue }), el('td', { class: 'num', text: fmt(m.maalit) }), el('td', { class: 'num', text: fmt(m.maalintekijoita) }), el('td', { class: 'num', text: fmt(m.paras_osuus_pct, 1) + ' %' }), el('td', { class: 'note', text: ((K.maalintekijat || []).find((x) => x.joukkue === m.joukkue && x.sarja === m.sarja) || { parhaat: [] }).parhaat.map((p) => p.nimi + ' ' + p.maalit).join(' · ') || '—' }))))))),
       el('p', { class: 'note', text: 'Lähde: ' + (K.lahde || 'Taso-tulospalvelu') + '. Sarjataulukot on laskettu otteluista: 3 pistettä voitosta, 1 tasapelistä; järjestys pisteet, maaliero, tehdyt maalit.' }));
   }
 
