@@ -155,6 +155,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .legend span, .blegend span { display: inline-flex; align-items: center; gap: 5px; }
 .jumps button.jump, .subtabs button { min-height: 30px; padding: 3px 11px; font-size: 12.5px; background: transparent; color: var(--muted); border: 1px solid var(--line-2); font-weight: 500; }
 .subtabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.insights { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.insight { border-left: 4px solid var(--ok); display: flex; flex-direction: column; gap: 2px; } .insight.warn { border-left-color: var(--warn); }
+.insight .big { font-size: 30px; font-weight: 650; }
+.insight .todo { margin-top: auto; padding-top: 10px; font-size: 13px; color: var(--ink); border-top: 1px solid var(--line); }
+.ikrow { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: center; margin-top: 8px; }
+.iklbl { font-size: 12px; color: var(--muted); font-weight: 600; }
+.iktiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.iktile { border-radius: 8px; padding: 7px 8px; display: flex; flex-direction: column; gap: 1px; border: 1px solid var(--line); background: var(--surface); }
+.iktile.ok { background: var(--accent-soft); border-color: transparent; } .iktile.miss { border: 1.5px dashed var(--warn); }
+.iktile b { font-size: 14px; } .iks { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ikn { font-size: 12px; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.ikdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; }
+.iksw { display: inline-block; width: 14px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; } .iksw.ok { background: var(--accent-soft); } .iksw.miss { border: 1.5px dashed var(--warn); }
 .subtabs button.on { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 8px; font-size: 13px; z-index: 60; }
 pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; font-size: 12px; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 0; max-height: 360px; overflow: auto; }
@@ -1280,14 +1293,59 @@ nav a[hidden] { display: none !important; }
     return ['Sopiva', 'var(--ok)', 't-ok']; };
   const tidOf = (r) => String(r.id || '').split('_').pop();
 
-  const SJ = [['sj-portaikko', 'Portaikko'], ['sj-joukkueet', 'Joukkueet'], ['sj-tasoerot', 'Tasoerot'], ['sj-ikaluokat', 'Ikäluokat'], ['sj-pysyvyys', 'Pysyvyys'], ['sj-putki', 'Putki'], ['pelaajalista', 'Pelaajat'], ['sj-maalit', 'Maalit']];
+  const SJ = [['sj-yhteenveto', 'Yhteenveto'], ['sj-portaikko', 'Portaikko'], ['sj-joukkueet', 'Joukkueet'], ['sj-tasoerot', 'Tasoerot'], ['sj-ikaluokat', 'Ikäluokat'], ['sj-pysyvyys', 'Pysyvyys'], ['sj-putki', 'Putki'], ['pelaajalista', 'Pelaajat'], ['sj-maalit', 'Maalit']];
   function viewSarjat() {
     const root = viewSarjat0(); if (!root.querySelector || !root.querySelector('#sj-portaikko')) return root;
-    const cur = F.sjTab || 'sj-portaikko';
-    const tabs = el('div', { class: 'subtabs', role: 'tablist', 'aria-label': 'Sarjat-näkymän osiot' }, SJ.filter(([id]) => root.querySelector('#' + id)).map(([id, l]) => el('button', { type: 'button', role: 'tab', class: cur === id ? 'on' : '', 'aria-selected': String(cur === id), onclick: () => { F.sjTab = id; render(); } }, l)));
+    const cur = F.sjTab || 'sj-yhteenveto';
+    const KK = (S.kaudet || []).slice().sort((a, b) => b.kausi - a.kausi)[0];
+    const yht = sjYhteenveto(KK); const gridEl = root.querySelector(':scope > .grid');
+    if (cur === 'sj-yhteenveto') { if (gridEl) gridEl.replaceWith(yht); else root.querySelector('.jumps') && root.querySelector('.jumps').after(yht); } else yht.remove();
+    const tabs = el('div', { class: 'subtabs', role: 'tablist', 'aria-label': 'Sarjat-näkymän osiot' }, SJ.filter(([id]) => id === 'sj-yhteenveto' || root.querySelector('#' + id)).map(([id, l]) => el('button', { type: 'button', role: 'tab', class: cur === id ? 'on' : '', 'aria-selected': String(cur === id), onclick: () => { F.sjTab = id; render(); } }, l)));
     const jr = root.querySelector('.jumps'); if (jr) jr.replaceWith(tabs);
     SJ.forEach(([id]) => { const n = root.querySelector('#' + id); if (n && id !== cur) n.remove(); });
     return root;
+  }
+  // Yhteenveto: kolme havaintoa toimenpiteineen + ikäluokat yhdellä silmäyksellä
+  function sjYhteenveto(K) {
+    const IK = (K.ikaluokat || []).slice().sort((a, b) => (a.sukupuoli === b.sukupuoli ? a.ika - b.ika : (a.sukupuoli === 'Pojat' ? -1 : 1)));
+    const SY = (K.sarjat || []).filter((r) => r.ottelut && !r.hh && r.kausiosa === 'syksy');
+    const best = (ik) => SY.filter((r) => r.ikaluokka === ik).sort((a, b) => (a.taso_nro ?? 99) - (b.taso_nro ?? 99) || (a.sija ?? 99) - (b.sija ?? 99))[0];
+    const lyh = (sarja, ik) => String(sarja || '').replace(ik + ' ', '').replace('Liiga Pohjoinen', 'Liiga').replace('SM-lopputurnaus', 'SM').replace('karsinta Ykköseen', 'karsinta');
+    const P = K.pysyvyys || {}, gP = IK.filter((r) => r.sukupuoli === 'Pojat'), gT = IK.filter((r) => r.sukupuoli !== 'Pojat');
+    const miss = IK.filter((r) => !r.syksy_ylin), ar = SY.map((r) => ({ r, a: arvio(r)[0] }));
+    const helppo = ar.filter((x) => x.a === 'Liian helppo?'), kova = ar.filter((x) => x.a === 'Liian kova?'), sopiva = ar.filter((x) => x.a === 'Sopiva');
+    const valmiit = miss.filter((r) => { const b = best(r.ikaluokka); return b && arvio(b)[0] === 'Liian helppo?'; });
+    const PS = (P.syntymavuosittain || []).filter((r) => r.pelaajia >= 20 && r.osuus_pct < 75).sort((a, b) => a.osuus_pct - b.osuus_pct).slice(0, 2);
+    const LJ = ((K.putki || {}).lopettajat_vs_jatkajat || []).filter((r) => r.lopetti && r.jatkoi && r.lopetti.pelaajia >= 5);
+    const med = (arr) => { const v = arr.slice().sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : null; };
+    const lo = med(LJ.map((r) => r.lopetti.ottelut_md)), ja = med(LJ.map((r) => r.jatkoi.ottelut_md));
+    const tn = (x) => x.r.ikaluokka + ' ' + lyh(x.r.sarja, x.r.ikaluokka);
+    const H = [
+      { k: 'Ylin taso', big: (IK.length - miss.length) + ' / ' + IK.length, lv: miss.length ? 'warn' : 'ok',
+        t: 'ikäluokkaa pelaa ylimmällä tasolla syksyllä: pojat ' + gP.filter((r) => r.syksy_ylin).length + ' / ' + gP.length + ', tytöt ' + gT.filter((r) => r.syksy_ylin).length + ' / ' + gT.length + '.',
+        d: miss.length ? 'Puuttuu: ' + miss.map((r) => r.ikaluokka).join(', ') + '.' + (gT.length && gT.filter((r) => !r.syksy_ylin).length > gP.filter((r) => !r.syksy_ylin).length ? ' Aukko on tyttöjen polussa.' : '') : 'Strategian tavoite täyttyy.',
+        a: valmiit.length ? 'Hae ylimmälle tasolle ' + valmiit.map((r) => r.ikaluokka).join(', ') + ': joukkue on omalla tasollaan liian vahva.' : miss.length ? 'Tee jokaiselle puuttuvalle ikäluokalle suunnitelma: pelaajamäärä, valmentaja ja karsinta ensi kaudelle.' : 'Pidä taso: seuraa karsintoja.' },
+      { k: 'Oikea taso joukkueille', big: sopiva.length + ' / ' + ar.length, lv: helppo.length + kova.length > ar.length / 3 ? 'warn' : 'ok',
+        t: 'syksyn joukkueesta pelaa omalla tasollaan (Sopiva). Kehitys syntyy tiukoista otteluista.',
+        d: [helppo.length ? 'Liian helppo: ' + helppo.map(tn).join(', ') + '.' : null, kova.length ? 'Liian kova: ' + kova.map(tn).join(', ') + '.' : null].filter(Boolean).join(' ') || 'Ei poikkeamia.',
+        a: [helppo.length ? 'Liian helpot: ylemmälle tasolle tai parhaat pelaajat pelaamaan ylöspäin.' : null, kova.length ? 'Liian kovat: alemmalle tasolle tai pelaajia lisää.' : null].filter(Boolean).join(' ') || 'Ei toimenpiteitä.' },
+      { k: 'Pysyvyys', big: fmt(P.osuus_pct, 1) + ' %', lv: P.osuus_pct >= 75 ? 'ok' : 'warn',
+        t: 'alle 19-vuotiaista jatkoi (' + fmt(P.jatkoi) + ' / ' + fmt(P.pelaajia) + '). Tavoite yli 75 %.',
+        d: (PS.length ? 'Heikoimmat: ' + PS.map((r) => r.synt + ' ' + fmt(r.osuus_pct, 1) + ' % (' + r.jatkoi + ' / ' + r.pelaajia + ')').join(', ') + '.' : '') + (lo != null && ja != null ? ' Lopettaneet pelasivat mediaanina ' + lo + ' ottelua kaudessa, jatkaneet ' + ja + '.' : ''),
+        a: (PS.length ? 'Käy syntymävuosien ' + PS.map((r) => r.synt).join(' ja ') + ' lopettaneet läpi (Putki-välilehti). ' : '') + (lo != null && ja != null && lo < ja ? 'Vähän pelaavat lopettavat: sovi peliaikalupaus jokaiselle.' : '') }];
+    const hc = (h) => el('div', { class: 'card insight ' + h.lv }, el('div', { class: 'eyebrow', text: h.k }), el('div', { class: 'row', style: 'align-items:baseline;gap:8px' }, el('span', { class: 'big', text: h.big }), el('span', { class: 'note', text: h.t })),
+      el('p', { style: 'margin:6px 0 0;font-size:13.5px;line-height:1.45', text: h.d }), el('div', { class: 'todo' }, el('b', { text: 'Toimenpide (valmennuspäällikkö): ' }), h.a));
+    const tile = (r) => { const b = best(r.ikaluokka), a = b ? arvio(b) : null;
+      return el('div', { class: 'iktile ' + (r.syksy_ylin ? 'ok' : 'miss'), title: r.ikaluokka + ': ' + (r.syksy_sarja || '—') + (r.syksy_sija ? ', sija ' + r.syksy_sija + ' / ' + r.syksy_joukkueita : '') + (a ? ' · ' + a[0] : '') + ' · ' + (r.joukkueita || 0) + ' joukkuetta' },
+        el('b', { text: r.ikaluokka }), el('span', { class: 'iks', text: lyh(r.syksy_sarja, r.ikaluokka) || '—' }), el('span', { class: 'ikn' }, r.syksy_sija ? r.syksy_sija + '.' : '', a ? el('i', { class: 'ikdot', style: 'background:' + a[1], title: a[0] }) : null)); };
+    const strip = (lbl, L) => L.length ? el('div', { class: 'ikrow' }, el('span', { class: 'iklbl', text: lbl }), el('div', { class: 'iktiles' }, L.map(tile))) : null;
+    return el('div', { id: 'sj-yhteenveto', style: 'display:flex;flex-direction:column;gap:14px' },
+      el('div', { class: 'grid insights' }, H.map(hc)),
+      el('div', { class: 'card' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Ikäluokat syksyllä ' + K.kausi }), el('span', { class: 'note', text: 'Ikäluokan paras joukkue: sarjataso ja sija' })),
+        strip('Pojat', gP), strip('Tytöt', gT),
+        el('div', { class: 'legend' }, el('span', null, el('i', { class: 'iksw ok' }), 'ylimmällä tasolla'), el('span', null, el('i', { class: 'iksw miss' }), 'ei ylimmällä tasolla'),
+          ...[['Sopiva', 'var(--ok)'], ['Liian helppo?', 'var(--easy)'], ['Liian kova?', 'var(--warn)']].map(([t, c]) => el('span', null, el('i', { class: 'ikdot', style: 'background:' + c }), t))),
+        el('p', { class: 'note', text: 'Yksityiskohdat välilehdillä: Portaikko kaikki joukkueet tasoittain, Pysyvyys ja Putki syntymävuosittain, Pelaajat nimittäin. Tasoarvio: maaliero ja pisteet ottelua kohden sekä vahvuusmalli. Yhteyksiä, ei syitä.' })));
   }
   function viewSarjat0() {
     const K = (S.kaudet || []).slice().sort((a, b) => b.kausi - a.kausi)[0];
