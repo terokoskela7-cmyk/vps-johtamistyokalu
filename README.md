@@ -17,6 +17,8 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 7. `009_pelaajapolun_historia.sql` – pelaajapolun toteumat 2020–2026 Portaat-aineistosta
 8. `010_talous.sql` – suojattu talous-kokoelma (pelaajakohtaiset kustannukset vain urheilutoimelle ja toiminnanjohtajalle) ja pelaajabudjetti
 9. Pelaajien markkina-arvot: seuran sisäinen tiedosto `011_arvot_data.sql`, toimitetaan erikseen (ei tässä repossa)
+10. `012_akatemia_rekrytointi.sql` – kokoelmat akatemia (valmennuspäällikkö) ja rekrytointi (analyytikko) sekä niiden SQL-näkymät
+11. Akatemian esitäyttö: seuran sisäinen tiedosto `013_akatemia_data.sql` (alaikäisten nimiä), toimitetaan erikseen
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -45,6 +47,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 4.11.2026 | Akatemia ja polku -näkymä (valmius, seuraava askel, seuraajat kentälle), Rekrytointi-näkymä (kohdelista, ehdokashaku Wyscout-mittareilla, ehdokasviennit muista sarjoista), talouteen agentit, bonukset, jälleenmyyntiosuudet ja kassavirta 3 v | 012, 013 |
 | 4.11.2026 | Talous ja arvo -näkymä: joukkueen arvo, hallittu arvo, x ja y (myös valmennus ja ympäristö), myyntipotentiaaliset nuoret, pelaajakohtainen kannattavuus, arvon määrittely; koosteet hallitusraporttiin | 010, 011 |
 | 4.11.2026 | Pelijärjestelmät 4-3-3, 4-2-3-1, 3-4-3, 3-4-2-1, 3-5-2, 5-3-2; pelipaikkojen vapaa siirto kentällä; aloittajatarve järjestelmästä; kortin Arvo-näkymä | – |
 | urheilutoimi, valmennus, analyytikko | kaiken | kaiken |
