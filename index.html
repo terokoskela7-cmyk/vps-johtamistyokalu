@@ -226,6 +226,12 @@ pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular',
 .plines .six { left: 38%; right: 38%; height: 5.5%; } .plines .six.top { top: -2px; border-top: none; } .plines .six.bot { bottom: -2px; border-bottom: none; }
 .scard { position: absolute; transform: translateX(-50%); width: clamp(150px, 22%, 200px); background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; box-shadow: var(--shadow); z-index: 1; }
 .scard.open { z-index: 5; outline: 2px solid var(--accent); }
+.bpitch.layout .scard { outline: 1px dashed var(--accent); }
+.bpitch.layout .shead { cursor: grab; touch-action: none; }
+.bpitch.layout .brow { pointer-events: none; }
+.scard.moving { z-index: 8; box-shadow: 0 8px 24px rgba(0,0,0,.35); cursor: grabbing; }
+.bjarj .bsiirto { margin-left: 6px; }
+.bjarj .bsiirto.on { border-color: var(--accent); color: var(--accent); }
 .scard.dropover, .scard [data-drop-rooli].dropover { outline: 2px solid var(--accent); outline-offset: 1px; background-color: var(--accent-soft); }
 .shead { display: grid; grid-template-columns: auto 1fr auto auto; gap: 6px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
 .shead b { font-size: 12.5px; letter-spacing: .02em; } .slbl { color: var(--muted); font-size: 11px; } .sluot { color: var(--muted); font-size: 10.5px; }
@@ -271,6 +277,7 @@ pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular',
       <a href="#sarjat" data-view="sarjat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Sarjat ja pysyvyys</span></a>
       <a href="#pelipaikat" data-view="pelipaikat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/><circle cx="12" cy="12" r="3"/></svg><span>Pelaajaryhmä</span></a>
       <a href="#paatokset" data-view="paatokset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span>Päätöskortit</span></a>
+      <a href="#talous" data-view="talous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M5 16l4-5 4 3 6-8"/><path d="M15 6h4v4"/></svg><span>Talous ja arvo</span></a>
       <a href="#kayttajat" data-view="kayttajat" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.9 2.6 2.6 3 5.2"/></svg><span>Käyttäjät</span></a>
     </nav>
     <div class="foot"><button type="button" class="themebtn small" id="themebtn">Vaalea teema</button><div class="note" id="status">Yhdistetään seuran tietoihin…</div></div>
@@ -428,11 +435,12 @@ nav a[hidden] { display: none !important; }
   const SUUNN = ['Avoin', 'Jatkosopimus', 'Oma nuori', 'Hankinta', 'Laina sisään'];
   const KTYYPIT = ['Hankinta', 'Jatkosopimus', 'Laina ulos', 'Laina sisään', 'Lähtö / myynti', 'Nosto omasta polusta'];
   const JALKI = ['Odottaa', 'Saavutettu', 'Osittain', 'Ei saavutettu'];
-  const S = { mittarit: null, toimenpiteet: null, paikat: null, kortit: null, kaudet: null, pelaajat: null, skenaariot: null, asetukset: null, vahvuus: null, wyscout: null, hallitusraportti: null };
+  const S = { mittarit: null, toimenpiteet: null, paikat: null, kortit: null, kaudet: null, pelaajat: null, skenaariot: null, asetukset: null, vahvuus: null, wyscout: null, hallitusraportti: null, talous: null };
   const F = { kausi: 2027, skenaario: null, chip: 'Sopimus', sp: 'Kaikki', osa: 'syksy', hh: false, ik: 'Kaikki', poik: false, nimet: false, ptila: 'Lopetti tai siirtyi', psynt: 'Kaikki' };
   let db = null, me = null, canWrite = true, pendingRender = false, openSlot = null, confirmDel = null, mEdit = null;
   const KU = { list: null, loading: false, err: null };
   const UTJ = () => !!(window.__vps && window.__vps.rooli === 'urheilutoimi');
+  const TALO = () => !!(window.__vps && ['urheilutoimi', 'toiminnanjohtaja'].includes(window.__vps.rooli));   // pelaajakohtaiset kustannukset
   const $view = document.getElementById('view'), $status = document.getElementById('status');
   const $theme = document.getElementById('themebtn');
   const applyTheme = (th) => { document.documentElement.setAttribute('data-theme', th); if ($theme) $theme.textContent = th === 'dark' ? 'Vaalea teema' : 'Tumma teema'; try { localStorage.setItem('vps-theme', th); } catch (e) { /* ei tallennusta */ } };
@@ -477,7 +485,7 @@ nav a[hidden] { display: none !important; }
       el('button', { type: 'button', disabled: !canWrite, onclick: async () => {
         const payload = { julkaistu: new Date().toISOString(), julkaisija: me, kausi: SEASONS[0], ryhma: squadScore(P, SEASONS[0], nyky()),
           paikat: P.map((p, i) => ({ pelipaikka: p.pelipaikka, pisteet: HK[i].pisteet, sc: HK[i].sc, luot: HK[i].luot, syvyys: HK[i].txt.syvyys })),
-          kortit: { kausi, n: Kk.length, jk }, teksti: report };
+          kortit: { kausi, n: Kk.length, jk }, talous: talAgg(talCalc()), teksti: report };
         try { await db.doc('hallitusraportti/viimeisin').set(payload); toast('Raportti julkaistu hallitukselle'); } catch (e) { toast('Julkaisu epäonnistui: ' + (e.message || e)); }
       } }, 'Julkaise hallitukselle'),
       el('span', { class: 'note', text: R && R.julkaistu ? 'Viimeksi julkaistu ' + new Date(R.julkaistu).toLocaleString('fi-FI') : 'Hallitus ei näe pelaajaryhmää ennen julkaisua' }));
@@ -502,6 +510,7 @@ nav a[hidden] { display: none !important; }
           el('thead', null, el('tr', null, ['Pelipaikka', 'Pisteet', 'Taso', 'Syvyys', 'Jatkuvuus', 'Oma polku', 'Luotettavuus'].map((h, i) => el('th', { class: i === 1 || i === 6 ? 'num' : null, text: h })))),
           el('tbody', null, R.paikat.map((p) => el('tr', null, el('td', null, el('b', { text: p.pelipaikka }), el('div', { class: 'note', text: p.syvyys || '' })), el('td', { class: 'num' }, spill(p.pisteet)), DIMS.map(([k]) => el('td', null, mbar(p.sc ? p.sc[k] : null))), el('td', { class: 'num', text: p.luot + ' %' }))),
             el('tr', { class: 'sum' }, el('td', { text: 'Pelaajaryhmä' }), el('td', { class: 'num' }, spill(R.ryhma)), el('td', { colspan: '5', class: 'note', text: 'Pisteiden laskennan näet urheilutoimenjohtajan näkymästä.' })))))) : null,
+      R && R.talous ? talousKortti(R.talous, 'Julkaistu tilannekuva · ilman nimiä') : null,
       el('div', { class: 'card' }, el('h3', { text: 'Mittarit tavoitteeseen' }),
         el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Tavoite 2030' }), el('th', { class: 'num', text: 'Viimeisin' }), el('th', { text: 'Tila' }))),
           el('tbody', null, M.map((m) => { const l = lastVal(m); return el('tr', null, el('td', { text: m.mittari }), el('td', { text: m.tavoite_2030 }), el('td', { class: 'num', text: l ? fmt(l.v, m.yksikko === '%' ? 1 : 0) + (m.yksikko === '%' ? ' %' : '') + ' (' + l.y + ')' : '—' }), el('td', null, pill(tila(m)))); }))))),
@@ -524,7 +533,8 @@ nav a[hidden] { display: none !important; }
       'MITTARIT', ...M.map((m) => { const l = lastVal(m); return '- ' + m.mittari + ': ' + (l ? fmt(l.v, m.yksikko === '%' ? 1 : 0) + (m.yksikko === '%' ? ' %' : ' ' + (m.yksikko || '')) + ' (' + l.y + ')' : 'ei toteumaa') + ' · tavoite 2030 ' + m.tavoite_2030 + ' · ' + tila(m); }), '',
       'PELAAJARYHMÄ KAUDELLA ' + SEASONS[0] + ': ' + f1(squadScore(P, SEASONS[0], nyky())) + ' / 10', ...P.map((p, i) => '- ' + p.pelipaikka + ': ' + f1(HK[i].pisteet) + ' / 10, luotettavuus ' + HK[i].luot + ' % (taso: ' + HK[i].txt.taso + '; syvyys: ' + HK[i].txt.syvyys + '; jatkuvuus: ' + HK[i].txt.jatkuvuus + ')'), '',
       'PÄÄTÖSKORTIT kaudella ' + kausi + ': ' + Kk.length + '; jälkiarvioidut: ' + (Object.entries(jk).map(([k, v]) => k + ' ' + v).join(', ') || 'ei vielä'), '',
-      'TOIMENPITEET', ...Object.entries(tt).map(([k, v]) => '- ' + k + ': ' + v),
+      'TOIMENPITEET', ...Object.entries(tt).map(([k, v]) => '- ' + k + ': ' + v), '',
+      ...talTeksti(talAgg(talCalc())),
     ].join('\n');
     return el('div', { style: 'display:flex;flex-direction:column;gap:18px' },
       pageHead('Eteneekö strategia 2030?', 'Hallituksen yhteenveto ilman pelaajanimiä. Urheilutoimenjohtaja vastaa kysymyksiin yksittäisistä pelaajista.', julkaisuNappi(P, HK, Kk, jk, kausi, report)),
@@ -534,6 +544,7 @@ nav a[hidden] { display: none !important; }
         kpi('Päätöskortit kaudella ' + kausi, fmt(Kk.length), 'päätöstä', Object.keys(jk).length ? subPills(jk, ['Saavutettu', 'Osittain', 'Ei saavutettu']) : [el('span', { text: 'Jälkiarviointi lokakuussa' })]),
         kpi('Toimenpiteet', fmt(T.length), 'kpl', subPills(tt, ['Toteutunut', 'Käynnissä', 'Myöhässä', 'Ei aloitettu', 'Ehdotus', 'Tieto puuttuu']))),
       el('div', { class: 'card' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Pelaajaryhmä kaudella ' + SEASONS[0] }), el('span', { class: 'note', text: 'Nykytilanne · ilman nimiä' })), scoreTable(P, SEASONS[0], nyky(), { nyky: true })),
+      talousKortti(talAgg(talCalc()), 'Nykytilanne · ilman nimiä · julkaistaan hallitukselle'),
       el('div', { class: 'card' }, el('h3', { text: 'Mittarit tavoitteeseen' }),
         el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, el('th', { text: 'Mittari' }), el('th', { text: 'Tavoite 2030' }), el('th', { class: 'num', text: 'Viimeisin' }), el('th', { text: 'Tila' }))),
           el('tbody', null, M.map((m) => { const l = lastVal(m); return el('tr', null, el('td', { text: m.mittari }), el('td', { text: m.tavoite_2030 }), el('td', { class: 'num', text: l ? fmt(l.v, m.yksikko === '%' ? 1 : 0) + (m.yksikko === '%' ? ' %' : '') + ' (' + l.y + ')' : '—' }), el('td', null, pill(tila(m)))); }))))),
@@ -653,7 +664,7 @@ nav a[hidden] { display: none !important; }
           el('button', { type: 'submit' }, 'Tallenna'))),
       el('div', { class: 'card' }, el('h3', { text: 'Mitä rooli saa tehdä' }), el('div', { class: 'tw' }, el('table', null,
         el('thead', null, el('tr', null, ['Rooli', 'Näkee', 'Muuttaa'].map((h) => el('th', { text: h })))),
-        el('tbody', null, [['Urheilutoimi, valmennus, analyytikko', 'kaiken', 'kaiken'], ['Toiminnanjohtaja', 'kaiken', 'kaiken paitsi poistot'], ['Hallitus', 'strategian ja julkaistun raportin, ei pelaajia', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
+        el('tbody', null, [['Urheilutoimi', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken'], ['Valmennus, analyytikko', 'kaiken paitsi pelaajakohtaiset kustannukset', 'kaiken paitsi kustannukset'], ['Toiminnanjohtaja', 'kaiken, myös pelaajakohtaiset kustannukset', 'kaiken paitsi pelaajien ja mittarien poistot'], ['Hallitus', 'strategian ja julkaistun raportin koosteet, ei pelaajia eikä palkkoja', 'ei mitään'], ['Käyttäjähallinta', '', 'vain urheilutoimi']].map((r) => el('tr', null, r.map((c) => el('td', { text: c })))))))));
   }
   function viewStrategia() {
     const M = sorted(S.mittarit, 'jarj'), T = sorted(S.toimenpiteet, 'jarj');
@@ -690,7 +701,27 @@ nav a[hidden] { display: none !important; }
   const PAATOS = ['Jatkosopimus', 'Nosto omasta polusta', 'Hankinta', 'Laina sisään', 'Ei toimenpidettä'];
   const TARVE0 = { 'Maalivahti': 1, 'Toppari': 2, 'Laitapuolustaja': 2, 'Keskikenttä': 2, 'Hyökkäävä keskikenttä ja laita': 3, 'Kärki': 1 };
   const KPI_EHDOTUS = { 'Maalivahti': 'esim. torjuntaprosentti', 'Toppari': 'esim. voitetut ilmakaksinkamppailut %', 'Laitapuolustaja': 'esim. etenevät syötöt / 90 min', 'Keskikenttä': 'esim. pallonriistot keskialueella / 90 min', 'Hyökkäävä keskikenttä ja laita': 'esim. maalipaikkoihin johtaneet syötöt / 90 min', 'Kärki': 'esim. maalit + maalisyötöt / 90 min' };
-  const tarveOf = (p) => Number(p.tarve) || TARVE0[p.pelipaikka] || 1;
+  // Pelijärjestelmät: [koodi, nimi, pelipaikkaryhmä, x %, y %]. Paikkoja voi siirtää kentällä (asetukset/kentta.asettelu).
+  const G_MV = 'Maalivahti', G_TP = 'Toppari', G_LP = 'Laitapuolustaja', G_KK = 'Keskikenttä', G_HK = 'Hyökkäävä keskikenttä ja laita', G_KA = 'Kärki';
+  const JARJ = {
+    '4-3-3': [['MV', 'Maalivahti', G_MV, 50, 83], ['VTP', 'Vasen toppari', G_TP, 36, 68], ['OTP', 'Oikea toppari', G_TP, 64, 68], ['VLP', 'Vasen laitapuolustaja', G_LP, 13, 57], ['OLP', 'Oikea laitapuolustaja', G_LP, 87, 57],
+      ['AKK', 'Alempi keskikenttä', G_KK, 50, 45], ['KK', 'Keskikenttä', G_KK, 26, 30], ['HKK', 'Hyökkäävä keskikenttä', G_HK, 74, 30], ['VL', 'Vasen laita', G_HK, 13, 14], ['OL', 'Oikea laita', G_HK, 87, 14], ['KÄ', 'Kärki', G_KA, 50, 2]],
+    '4-2-3-1': [['MV', 'Maalivahti', G_MV, 50, 83], ['VTP', 'Vasen toppari', G_TP, 36, 67], ['OTP', 'Oikea toppari', G_TP, 64, 67], ['VLP', 'Vasen laitapuolustaja', G_LP, 13, 59], ['OLP', 'Oikea laitapuolustaja', G_LP, 87, 59],
+      ['AKK', 'Vasen alempi keskikenttä', G_KK, 37, 42], ['KK', 'Oikea alempi keskikenttä', G_KK, 63, 42], ['HKK', 'Hyökkäävä keskikenttä', G_HK, 50, 25], ['VL', 'Vasen laita', G_HK, 13, 21], ['OL', 'Oikea laita', G_HK, 87, 21], ['KÄ', 'Kärki', G_KA, 50, 2]],
+    '3-4-3': [['MV', 'Maalivahti', G_MV, 50, 83], ['VTP', 'Vasen toppari', G_TP, 22, 68], ['KTP', 'Keskitoppari', G_TP, 50, 68], ['OTP', 'Oikea toppari', G_TP, 78, 68], ['VLP', 'Vasen laitapakki (wingback)', G_LP, 12, 45], ['OLP', 'Oikea laitapakki (wingback)', G_LP, 88, 45],
+      ['AKK', 'Vasen keskikenttä', G_KK, 37, 45], ['KK', 'Oikea keskikenttä', G_KK, 63, 45], ['VL', 'Vasen laitahyökkääjä', G_HK, 15, 16], ['OL', 'Oikea laitahyökkääjä', G_HK, 85, 16], ['KÄ', 'Kärki', G_KA, 50, 2]],
+    '3-4-2-1': [['MV', 'Maalivahti', G_MV, 50, 83], ['VTP', 'Vasen toppari', G_TP, 22, 68], ['KTP', 'Keskitoppari', G_TP, 50, 68], ['OTP', 'Oikea toppari', G_TP, 78, 68], ['VLP', 'Vasen laitapakki (wingback)', G_LP, 12, 45], ['OLP', 'Oikea laitapakki (wingback)', G_LP, 88, 45],
+      ['AKK', 'Vasen keskikenttä', G_KK, 37, 45], ['KK', 'Oikea keskikenttä', G_KK, 63, 45], ['VL', 'Vasen hyökkäävä keskikenttä', G_HK, 31, 21], ['OL', 'Oikea hyökkäävä keskikenttä', G_HK, 69, 21], ['KÄ', 'Kärki', G_KA, 50, 2]],
+    '3-5-2': [['MV', 'Maalivahti', G_MV, 50, 83], ['VTP', 'Vasen toppari', G_TP, 22, 68], ['KTP', 'Keskitoppari', G_TP, 50, 68], ['OTP', 'Oikea toppari', G_TP, 78, 68], ['VLP', 'Vasen laitapakki (wingback)', G_LP, 12, 50], ['OLP', 'Oikea laitapakki (wingback)', G_LP, 88, 50],
+      ['AKK', 'Alempi keskikenttä', G_KK, 50, 50], ['KK', 'Keskikenttä', G_KK, 30, 25], ['HKK', 'Hyökkäävä keskikenttä', G_HK, 70, 25], ['KÄ', 'Vasen kärki', G_KA, 36, 2], ['KÄ2', 'Oikea kärki', G_KA, 64, 2]],
+    '5-3-2': [['MV', 'Maalivahti', G_MV, 50, 83], ['VTP', 'Vasen toppari', G_TP, 26, 70], ['KTP', 'Keskitoppari', G_TP, 50, 70], ['OTP', 'Oikea toppari', G_TP, 74, 70], ['VLP', 'Vasen laitapuolustaja', G_LP, 11, 53], ['OLP', 'Oikea laitapuolustaja', G_LP, 89, 53],
+      ['AKK', 'Alempi keskikenttä', G_KK, 50, 47], ['KK', 'Keskikenttä', G_KK, 30, 29], ['HKK', 'Hyökkäävä keskikenttä', G_HK, 70, 29], ['KÄ', 'Vasen kärki', G_KA, 36, 2], ['KÄ2', 'Oikea kärki', G_KA, 64, 2]] };
+  const kenttaDoc = () => (S.asetukset || []).find((x) => x.id === 'kentta') || {};
+  const jarjOf = (sk) => { const j = (sk && sk.jarjestelma) || kenttaDoc().jarjestelma; return JARJ[j] ? j : '4-3-3'; };
+  const slotsJ = (j) => { const mu = (kenttaDoc().asettelu || {})[j] || {}; return (JARJ[j] || JARJ['4-3-3']).map(([c, n, g, x, y]) => (mu[c] ? [c, n, g, mu[c][0], mu[c][1]] : [c, n, g, x, y])); };
+  let JARJ_NYT = null;   // aktiivisen skenaarion järjestelmä Pelaajaryhmä-näkymässä
+  const formN = () => { const n = {}; slotsJ(JARJ_NYT || jarjOf(null)).forEach((d) => { n[d[2]] = (n[d[2]] || 0) + 1; }); return n; };
+  const tarveOf = (p) => formN()[p.pelipaikka] || Number(p.tarve) || TARVE0[p.pelipaikka] || 1;
   const syvTarve = (p) => Number(p.syvyys) || (p.pelipaikka === 'Maalivahti' ? 3 : tarveOf(p) * 2);
   // Skenaariot: nykytilanne = pelaajat-kokoelma; skenaario = muutokset nykytilanteen päälle (ei koske nykytilannetta ennen toteutusta)
   const skOf = (id) => (S.skenaariot || []).find((k) => k.id === id) || null;
@@ -891,6 +922,20 @@ nav a[hidden] { display: none !important; }
     });
   }
 
+  // Pelipaikkojen siirto kentällä (asettelutila): vedä otsikosta, tallentuu järjestelmäkohtaisesti
+  function enableSlotDrag(field, onSave) {
+    field.addEventListener('pointerdown', (e) => {
+      if (e.button > 0) return; const head = e.target.closest('.shead'); if (!head) return; const card = head.closest('.scard'); if (!card) return;
+      e.preventDefault(); const r = field.getBoundingClientRect(), c0 = card.getBoundingClientRect(); const ox = e.clientX - (c0.left + c0.width / 2), oy = e.clientY - c0.top; let moved = false, nx = null, ny = null;
+      const move = (ev) => { if (!moved && Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 4) return; moved = true; ev.preventDefault();
+        nx = Math.max(11, Math.min(89, (ev.clientX - ox - r.left) / r.width * 100)); ny = Math.max(0, Math.min(86, (ev.clientY - oy - r.top) / r.height * 100));
+        card.style.left = nx + '%'; card.style.top = ny + '%'; card.classList.add('moving'); };
+      const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up); card.classList.remove('moving');
+        if (!moved || nx == null) return; const stop = (ce) => { ce.stopPropagation(); ce.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 50);
+        onSave(card.dataset.code, [Math.round(nx * 10) / 10, Math.round(ny * 10) / 10]); };
+      document.addEventListener('pointermove', move, { passive: false }); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+    });
+  }
 
   function viewPelipaikat() {
     const P = sorted(S.paikat, 'jarj'), PL = curList(), s = F.kausi || SEASONS[0];
@@ -936,8 +981,10 @@ nav a[hidden] { display: none !important; }
       el('label', { class: 'note' }, 'Oma polku -tavoite % ', el('input', { class: 'n', type: 'number', min: '0', max: '100', step: '1', id: 'w-omat', value: Number(w.omatavoite) || 15, disabled: !canWrite, style: 'width:4.2em', onchange: (e) => save('asetukset/painot', { omatavoite: Number(e.target.value) || 15 }) })),
       el('span', { class: 'note', text: 'Hallitus päättää painot strategian perusteella. Oma polku -tavoite = omien enintään 21-vuotiaiden osuus pelipaikan minuuteista (strategian mittari: 15 %). Rooli lasketaan toteutuneesta peliajasta Portaat-tutkimuksen rajoilla: aloittaja = iso rooli vähintään 50 %, haastaja = rooli 20–49 %, kehitys = pieni rooli alle 20 %. Alle 20 % pelaavan nuoren kannattaa hakea rooli alemmalta tasolta (laina).' }));
     // 2. Suunnittelutaulu: skenaariovälilehdet, kausi, yhteenveto ja kenttä (muotoilun esikuva: Fokus squad planner)
-    const SLOTDEF = { 'Maalivahti': [['MV', 'Maalivahti', 50, 83]], 'Toppari': [['VTP', 'Vasen toppari', 36, 69], ['OTP', 'Oikea toppari', 64, 69]], 'Laitapuolustaja': [['VLP', 'Vasen laitapuolustaja', 13, 57], ['OLP', 'Oikea laitapuolustaja', 87, 57]],
-      'Keskikenttä': [['AKK', 'Alempi keskikenttä', 50, 45], ['KK', 'Keskikenttä', 26, 30]], 'Hyökkäävä keskikenttä ja laita': [['HKK', 'Hyökkäävä keskikenttä', 74, 30], ['VL', 'Vasen laita', 13, 14], ['OL', 'Oikea laita', 87, 14]], 'Kärki': [['KÄ', 'Kärki', 50, 2]] };
+    const JJ = jarjOf(act); JARJ_NYT = JJ;
+    const SLOTDEF = {}; slotsJ(JJ).forEach(([c, n, g, x, y]) => { (SLOTDEF[g] = SLOTDEF[g] || []).push([c, n, x, y]); });
+    const setJarj = (j) => { if (act) save('skenaariot/' + act.id, { jarjestelma: j }); else save('asetukset/kentta', { jarjestelma: j }); };
+    const setAsettelu = (code, xy) => { const a = Object.assign({}, kenttaDoc().asettelu || {}); a[JJ] = Object.assign({}, a[JJ] || {}); if (xy) a[JJ][code] = xy; else delete a[JJ][code]; save('asetukset/kentta', { asettelu: a }); };
     const slotsOf = (p) => SLOTDEF[p.pelipaikka] || [[(p.pelipaikka || '?').slice(0, 3).toUpperCase(), p.pelipaikka, 50, 50]];
     const slotMap = (p) => { const SL = slotsOf(p).map((d) => ({ code: d[0], L: [] }));
       const A = plOf(p).slice().sort((a, b) => (ROOLI_J[a.rooli] ?? 3) - (ROOLI_J[b.rooli] ?? 3) || (b.minuutit_pct || 0) - (a.minuutit_pct || 0) || String(a.id).localeCompare(String(b.id)));
@@ -955,11 +1002,12 @@ nav a[hidden] { display: none !important; }
     const chipVal = (x) => { const m = F.chip || 'Sopimus';
       if (m === 'Ikä') { const a = ageIn(x, s); return [a != null ? a + ' v' : '?', a == null ? 'cv-0' : a <= 21 ? 'cv-g' : a <= 28 ? 'cv-y' : 'cv-o']; }
       if (m === 'Rooli') return [(x.rooli || '?').slice(0, 3), x.rooli === 'Avaus' ? 'cv-g' : x.rooli === 'Rotaatio' ? 'cv-y' : 'cv-b'];
+      if (m === 'Arvo') { const a = numOrNull(x.arvo); return [a == null ? '—' : fmt(a / 1000) + ' k', a == null ? 'cv-0' : a >= 200000 ? 'cv-g' : a >= 100000 ? 'cv-y' : 'cv-o']; }
       if (m === 'Peliaika') return [x._osuus == null ? '?' : Math.round(100 * x._osuus) + ' %', x._osuus == null ? 'cv-0' : x._osuus >= ROOLIRAJA.avaus ? 'cv-g' : x._osuus >= ROOLIRAJA.rotaatio ? 'cv-y' : 'cv-o'];
       const c = Number(x.sopimus); return [x.sopimus ? (x.laina ? 'laina ' : '') + c : 'sop. ?', !x.sopimus ? 'cv-0' : c <= s ? 'cv-r' : c === s + 1 ? 'cv-o' : 'cv-g']; };
     const editForm = (x) => { const f = (lbl, key, attrs) => el('label', null, lbl, el('input', Object.assign({ id: 'kc-' + x.id + '-' + key, value: x[key] ?? '', disabled: !canWrite, onchange: (e) => plSave(x.id, { [key]: attrs && attrs.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value }) }, attrs || { type: 'text' })));
       const chk = (lbl, key) => el('label', { class: 'chk' }, el('input', { type: 'checkbox', id: 'kc-' + x.id + '-' + key, checked: !!x[key], disabled: !canWrite, onchange: (e) => { e.target.blur(); plSave(x.id, { [key]: e.target.checked }); } }), lbl);
-      return el('div', { class: 'bedit' }, f('Nimi', 'nimi'), f('Syntymävuosi', 'synt', { type: 'number', min: '1980', max: '2015' }), f('Sopimus päättyy', 'sopimus', { type: 'number', min: '2026', max: '2035' }), f('Wyscout-nimi', 'wy'), el('div', { class: 'note', style: 'grid-column:1/-1' }, 'Toteutunut peliaika: ' + (x._osuus == null ? 'ei dataa' : Math.round(100 * x._osuus) + ' % (' + x._osLahde + (x._min ? ', ' + x._min + ' min' : '') + ')') + ' · laskettu rooli: ' + (x._rooliAuto || '—') + (x.rooliKasin ? ' · rooli asetettu käsin ' : ''), x.rooliKasin && x._rooliAuto ? el('button', { type: 'button', class: 'ghost small', onclick: () => plSave(x.id, { rooliKasin: false, rooli: x._rooliAuto }) }, 'Palauta laskettu rooli') : null),
+      return el('div', { class: 'bedit' }, f('Nimi', 'nimi'), f('Syntymävuosi', 'synt', { type: 'number', min: '1980', max: '2015' }), f('Sopimus päättyy', 'sopimus', { type: 'number', min: '2026', max: '2035' }), f('Wyscout-nimi', 'wy'), f('Markkina-arvo nyt (€)', 'arvo', { type: 'number', min: '0', step: '5000' }), f('Arvo edellisen kauden lopussa (€)', 'arvo_ed', { type: 'number', min: '0', step: '5000' }), el('div', { class: 'note', style: 'grid-column:1/-1' }, 'Toteutunut peliaika: ' + (x._osuus == null ? 'ei dataa' : Math.round(100 * x._osuus) + ' % (' + x._osLahde + (x._min ? ', ' + x._min + ' min' : '') + ')') + ' · laskettu rooli: ' + (x._rooliAuto || '—') + (x.rooliKasin ? ' · rooli asetettu käsin ' : ''), x.rooliKasin && x._rooliAuto ? el('button', { type: 'button', class: 'ghost small', onclick: () => plSave(x.id, { rooliKasin: false, rooli: x._rooliAuto }) }, 'Palauta laskettu rooli') : null),
         el('label', null, 'Rooli', el('select', { id: 'kc-' + x.id + '-r', disabled: !canWrite, onchange: (e) => { e.target.blur(); plSave(x.id, { rooli: e.target.value }); } }, ROOLIT.map((o) => el('option', { value: o, selected: x.rooli === o }, o)))),
         el('label', { style: 'grid-column:1/-1' }, 'Pelipaikka', el('select', { id: 'kc-' + x.id + '-p', disabled: !canWrite, onchange: (e) => { e.target.blur(); const [pid, sl] = e.target.value.split('|'); plSave(x.id, { paikka: pid, slot: sl }); } },
           P.map((q) => slotsOf(q).map((d) => el('option', { value: q.id + '|' + d[0], selected: x.paikka === q.id && (x.slot ? x.slot === d[0] : slotsOf(q)[0][0] === d[0]) }, d[0] + ' · ' + d[1]))).flat())),
@@ -977,7 +1025,7 @@ nav a[hidden] { display: none !important; }
       el('div', { class: 'row' }, el('button', { type: 'submit', class: 'small' }, 'Lisää'), el('button', { type: 'button', class: 'ghost small', onclick: () => { openSlot = null; render(); } }, 'Peru')));
     const slotCard = (p, q) => { const vp = Object.assign({}, p, { tarve: 1, syvyys: p.pelipaikka === 'Maalivahti' ? 3 : 2 }); const h = health(vp, s, q.L.map((x) => Object.assign({}, x, { paikka: p.id })));
       const open = q.L.some((x) => openSlot === 'kc' + x.id) || openSlot === 'ka' + q.code;
-      return el('div', { class: 'scard' + (open ? ' open' : ''), style: `left:${q.x}%;top:${q.y}%`, 'data-drop-paikka': p.id, 'data-drop-slot': q.code },
+      return el('div', { class: 'scard' + (open ? ' open' : ''), style: `left:${q.x}%;top:${q.y}%`, 'data-drop-paikka': p.id, 'data-drop-slot': q.code, 'data-code': q.code },
         el('div', { class: 'shead', 'data-drop-paikka': p.id, 'data-drop-slot': q.code, 'data-drop-rooli': 'Avaus', title: q.nimi + ' · ' + p.pelipaikka },
           el('b', { text: q.code }), el('span', { class: 'slbl', text: 'Pisteet' }), scoreBtn(h.pisteet, { tyyppi: 'paikka', pid: p.id, slot: q.code, slotIds: q.L.map((z) => z.id), s }), el('span', { class: 'sluot', title: 'Luotettavuus', text: h.luot + ' %' })),
         q.L.map((x) => { const isE = openSlot === 'kc' + x.id; const [v, cls] = chipVal(x);
@@ -1017,11 +1065,15 @@ nav a[hidden] { display: none !important; }
       el('button', { type: 'button', class: 'btab add', disabled: !canWrite, title: 'Uusi skenaario', 'aria-label': 'Uusi skenaario', onclick: async () => { try { const ref = await db.collection('skenaariot').add({ nimi: 'Skenaario ' + String.fromCharCode(65 + SK.length), luotu: new Date().toISOString(), luoja: me, muutokset: {}, poistetut: [], lisatyt: {} }); F.skenaario = ref.id; toast('Skenaario luotu'); } catch (e) { toast('Skenaarion luonti ei onnistunut'); } } }, '+'));
     const tool = el('div', { class: 'btool' },
       el('div', { class: 'btime' }, el('span', { class: 'bh', text: 'Kausi' }), el('div', { class: 'tline' }, SEASONS.map((y) => el('button', { type: 'button', class: 'tick' + (y === s ? ' on' : ''), 'aria-pressed': String(y === s), onclick: () => { F.kausi = y; render(); } }, el('span', { class: 'tdot' }), String(y))))),
-      el('div', { class: 'bmode', role: 'group', 'aria-label': 'Näytä korteissa' }, el('span', { class: 'bh', text: 'Näytä' }), ['Sopimus', 'Peliaika', 'Ikä', 'Rooli'].map((m) => el('button', { type: 'button', class: (F.chip || 'Sopimus') === m ? 'on' : '', 'aria-pressed': String((F.chip || 'Sopimus') === m), onclick: () => { F.chip = m; render(); } }, m))));
-    const field = el('div', { class: 'bpitch', id: 'pitch' }, el('div', { class: 'plines', 'aria-hidden': 'true' }, el('i', { class: 'half' }), el('i', { class: 'circ' }), el('i', { class: 'box top' }), el('i', { class: 'box bot' }), el('i', { class: 'six top' }), el('i', { class: 'six bot' })),
+      el('div', { class: 'bmode', role: 'group', 'aria-label': 'Näytä korteissa' }, el('span', { class: 'bh', text: 'Näytä' }), ['Sopimus', 'Peliaika', 'Ikä', 'Rooli', 'Arvo'].map((m) => el('button', { type: 'button', class: (F.chip || 'Sopimus') === m ? 'on' : '', 'aria-pressed': String((F.chip || 'Sopimus') === m), onclick: () => { F.chip = m; render(); } }, m))),
+      el('div', { class: 'bmode bjarj', role: 'group', 'aria-label': 'Pelijärjestelmä' }, el('span', { class: 'bh', text: 'Järjestelmä' }), Object.keys(JARJ).map((j) => el('button', { type: 'button', class: JJ === j ? 'on' : '', 'aria-pressed': String(JJ === j), disabled: !canWrite, onclick: () => { if (JJ !== j) setJarj(j); } }, j)),
+        el('button', { type: 'button', class: 'ghost small bsiirto' + (F.asettelu ? ' on' : ''), 'aria-pressed': String(!!F.asettelu), disabled: !canWrite, title: 'Siirrä pelipaikkoja kentällä vetämällä otsikosta', onclick: () => { F.asettelu = !F.asettelu; render(); } }, F.asettelu ? 'Valmis' : 'Siirrä paikkoja'),
+        F.asettelu && Object.keys((kenttaDoc().asettelu || {})[JJ] || {}).length ? el('button', { type: 'button', class: 'ghost small', onclick: () => { const a = Object.assign({}, kenttaDoc().asettelu || {}); a[JJ] = {}; save('asetukset/kentta', { asettelu: a }); } }, 'Palauta pohja') : null));
+    const field = el('div', { class: 'bpitch' + (F.asettelu ? ' layout' : ''), id: 'pitch' }, el('div', { class: 'plines', 'aria-hidden': 'true' }, el('i', { class: 'half' }), el('i', { class: 'circ' }), el('i', { class: 'box top' }), el('i', { class: 'box bot' }), el('i', { class: 'six top' }), el('i', { class: 'six bot' })),
       P.map((p) => assign(p).map((q) => slotCard(p, q))).flat(2));
-    const leg = el('div', { class: 'blegend' }, (F.chip === 'Peliaika' ? [['cv-g', 'iso rooli ≥ 50 %'], ['cv-y', 'rooli 20–49 %'], ['cv-o', 'pieni rooli < 20 %'], ['cv-0', 'ei peliaikadataa']] : F.chip === 'Ikä' ? [['cv-g', 'enintään 21 v'], ['cv-y', '22–28 v'], ['cv-o', '29 v tai yli']] : F.chip === 'Rooli' ? [['cv-g', 'Avaus'], ['cv-y', 'Rotaatio'], ['cv-b', 'Kehitys']] : [['cv-g', 'sopimus ' + (s + 2) + '+'], ['cv-o', 'päättyy ' + (s + 1)], ['cv-r', 'päättyy ' + s]]).map(([c, t]) => el('span', null, el('i', { class: 'cval ' + c, text: ' ' }), t)),
-      el('span', null, el('i', { class: 'odot' }), 'oma kasvatti'), el('span', null, el('i', { class: 'qmark', text: '?' }), 'tiedot tarkistamatta'), el('span', null, el('i', { class: 'lmark', text: '↓' }), 'oma nuori alle 20 %: harkitse lainaa'), el('span', { text: 'Raahaa ⋮⋮ toiseen pelipaikkaan, klikkaa nimeä muokataksesi.' }));
+    const leg = el('div', { class: 'blegend' }, (F.chip === 'Peliaika' ? [['cv-g', 'iso rooli ≥ 50 %'], ['cv-y', 'rooli 20–49 %'], ['cv-o', 'pieni rooli < 20 %'], ['cv-0', 'ei peliaikadataa']] : F.chip === 'Ikä' ? [['cv-g', 'enintään 21 v'], ['cv-y', '22–28 v'], ['cv-o', '29 v tai yli']] : F.chip === 'Rooli' ? [['cv-g', 'Avaus'], ['cv-y', 'Rotaatio'], ['cv-b', 'Kehitys']] : F.chip === 'Arvo' ? [['cv-g', 'markkina-arvo ≥ 200 k€'], ['cv-y', '100–199 k€'], ['cv-o', 'alle 100 k€'], ['cv-0', 'ei arviota']] : [['cv-g', 'sopimus ' + (s + 2) + '+'], ['cv-o', 'päättyy ' + (s + 1)], ['cv-r', 'päättyy ' + s]]).map(([c, t]) => el('span', null, el('i', { class: 'cval ' + c, text: ' ' }), t)),
+      el('span', null, el('i', { class: 'odot' }), 'oma kasvatti'), el('span', null, el('i', { class: 'qmark', text: '?' }), 'tiedot tarkistamatta'), el('span', { text: 'Järjestelmä ' + JJ + (act ? ' (skenaario)' : '') + ': aloittajia tarvitaan ' + Object.entries(formN()).map(([g, n]) => g.toLowerCase().replace('hyökkäävä keskikenttä ja laita', 'hyökkäävä/laita') + ' ' + n).join(', ') + '.' }),
+      F.asettelu ? el('span', { style: 'color:var(--accent)', text: 'Asettelutila: vedä pelipaikan otsikosta uuteen kohtaan. Pelaajia ei voi siirtää tässä tilassa.' }) : null, el('span', null, el('i', { class: 'lmark', text: '↓' }), 'oma nuori alle 20 %: harkitse lainaa'), el('span', { text: 'Raahaa ⋮⋮ toiseen pelipaikkaan, klikkaa nimeä muokataksesi.' }));
     const pitch = el('section', { class: 'board', id: 'pp-kentta', 'aria-label': 'Pelaajaryhmän suunnittelutaulu' }, tabs,
       act ? el('div', { class: 'bscen' }, el('span', { text: 'Muokkaat skenaariota: muutokset eivät koske nykytilannetta ennen toteutusta.' }),
         el('label', null, 'Nimi ', el('input', { id: 'sk-nimi', value: act.nimi || '', disabled: !canWrite, onchange: (e) => save('skenaariot/' + act.id, { nimi: e.target.value }) })), el('span', { text: 'Muutoksia ' + nMuut(act) }),
@@ -1030,7 +1082,7 @@ nav a[hidden] { display: none !important; }
         confirmDel === 'skD' ? [el('button', { type: 'button', class: 'danger small', onclick: async () => { try { await db.doc('skenaariot/' + act.id).delete(); F.skenaario = null; confirmDel = null; toast('Skenaario poistettu'); } catch (e) { toast('Poisto ei onnistunut'); } } }, 'Vahvista poisto'), el('button', { type: 'button', class: 'ghost small', onclick: () => { confirmDel = null; render(); } }, 'Peru')]
           : el('button', { type: 'button', class: 'danger small', disabled: !canWrite, onclick: () => { confirmDel = 'skD'; render(); } }, 'Poista skenaario')) : null,
       tool, el('div', { class: 'bbody' }, side, el('div', { class: 'bfieldwrap' }, field)), leg);
-    window.__smap = SMAP; if (canWrite) enableDrag(pitch);
+    window.__smap = SMAP; if (canWrite) { enableDrag(pitch); if (F.asettelu) enableSlotDrag(field, setAsettelu); }
 
     // 1. Tila + mittarieditori
     const ed = P.find((p) => p.id === openSlot);
@@ -1060,7 +1112,7 @@ nav a[hidden] { display: none !important; }
       return el('div', { class: 'card', id: 'pp-edit' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: ed.pelipaikka + ': tason mittarit ja tarve' }), el('button', { type: 'button', class: 'ghost', onclick: () => { openSlot = null; render(); } }, 'Sulje')),
         el('div', { class: 'slotedit' },
           el('label', null, 'Tarkenne (esim. vasen)', el('input', { id: 'pe-tark', value: ed.tarkenne || '', disabled: !canWrite, onchange: (e) => save('paikat/' + ed.id, { tarkenne: e.target.value }) })),
-          el('label', null, 'Aloittajia tarvitaan', el('input', { id: 'pe-tarve', type: 'number', min: '1', max: '4', value: tarveOf(ed), disabled: !canWrite, onchange: (e) => save('paikat/' + ed.id, { tarve: Number(e.target.value) || null }) })),
+          el('label', null, 'Aloittajia tarvitaan', el('input', { id: 'pe-tarve', type: 'number', min: '1', max: '4', value: tarveOf(ed), disabled: true, title: 'Määräytyy pelijärjestelmästä' }), el('span', { class: 'note', text: 'Pelijärjestelmästä ' + jarjOf(skOf(F.skenaario)) })),
           el('label', null, 'Pelaajia tavoitteena', el('input', { id: 'pe-syv', type: 'number', min: '1', max: '8', value: syvTarve(ed), disabled: !canWrite, onchange: (e) => save('paikat/' + ed.id, { syvyys: Number(e.target.value) || null }) }))),
         el('div', { class: 'formula', text: 'Taso = mittarien pisteiden keskiarvo. Wyscout-mittari: pelaajan persentiili Veikkausliigan saman pelipaikan pelaajiin (vähintään ' + ((d && d.minmin) || 450) + ' min) → 10 × min(1; persentiili / tavoitepersentiili). Pelipaikan arvo = aloittajat 70 % + muut 30 %. Oma arvio: 10 × min(1; toteuma / tavoite).' + (TC.sc != null ? ' Nyt: Taso ' + f1(TC.sc) + '.' : '') }),
         el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Lähde', 'Mittari', 'Tavoite', 'Suunta', 'Toteuma', 'Pisteet', ''].map((h, j) => el('th', { class: j === 5 ? 'num' : null, text: h })))), el('tbody', null, rowsK))),
@@ -1390,17 +1442,123 @@ nav a[hidden] { display: none !important; }
       el('p', { class: 'note', text: 'Lähde: ' + (K.lahde || 'Taso-tulospalvelu') + '. Sarjataulukot on laskettu otteluista: 3 pistettä voitosta, 1 tasapelistä; järjestys pisteet, maaliero, tehdyt maalit.' }));
   }
 
+  // ---------- Talous ja joukkueen arvo ----------
+  // x = investointi (pelaajabudjetti; laajasti myös valmennus ja ympäristö), y = arvonluonti (omien pelaajien arvonmuutos + myyntitulot).
+  const talAs = () => (S.asetukset || []).find((x) => x.id === 'talous') || {};
+  const talInv = () => (S.talous || []).find((x) => x.id === 'investoinnit') || {};
+  const talKust = (id) => numOrNull(((S.talous || []).find((x) => x.id === id) || {}).kustannus);
+  const eur = (v) => v == null ? '—' : Math.abs(v) >= 1e6 ? fmt(v / 1e6, 2) + ' M€' : fmt(Math.round(v / 1000)) + ' k€';
+  const pctS = (v, d) => v == null ? '—' : fmt(100 * v, d == null ? 0 : d) + ' %';
+  function talCalc() {
+    const A = talAs(), K = Number(A.budjettikausi) || NOW_Y, L = nyky().filter((x) => activeIn(x, K));
+    const own = L.filter((x) => !x.laina), loan = L.filter((x) => x.laina), arvo = (x) => numOrNull(x.arvo);
+    const sum = (arr, f) => arr.reduce((a, x) => a + (f(x) || 0), 0), age = (x) => (x.synt ? K - Number(x.synt) : null);
+    const ik = (x) => { const c = Number(x.sopimus); return !c ? 'tuntematon' : c <= K ? 'alle12' : c === K + 1 ? 'k12_23' : 'yli24'; };
+    const win = { alle12: 0, k12_23: 0, yli24: 0, tuntematon: 0 }; own.forEach((x) => { win[ik(x)] += arvo(x) || 0; });
+    const mitattu = own.filter((x) => numOrNull(x.arvo_ed) != null && arvo(x) != null), muutos = sum(mitattu, (x) => arvo(x) - numOrNull(x.arvo_ed));
+    const myynnit = numOrNull((A.myynnit || {})[K]) || 0, budjetti = numOrNull(A.budjetti), sp = numOrNull(A.sarjapaikka);
+    const I = talInv(), valm = numOrNull(I.valmennus), ymp = numOrNull(I.ymparisto), y = muutos + myynnit;
+    const xL = budjetti != null && (valm != null || ymp != null) ? budjetti + (valm || 0) + (ymp || 0) : null;
+    const nuoret = own.filter((x) => age(x) != null && age(x) <= 23).map((x) => ({ x, a: age(x), rooli: x._osuus != null && x._osuus >= ROOLIRAJA.rotaatio, sop: Number(x.sopimus) >= K + 2 }))
+      .sort((p, q) => (q.rooli + q.sop) - (p.rooli + p.sop) || (q.x._osuus || 0) - (p.x._osuus || 0));
+    const osT = sum(L, (x) => x._osuus), osL = sum(loan, (x) => x._osuus);
+    const kust = L.map((x) => talKust(x.id)).filter((v) => v != null);
+    return { K, L, own, loan, arvo, age, ik, total: sum(L, arvo), owned: sum(own, arvo), loanV: sum(loan, arvo), win, mitattu, muutos, myynnit, y, budjetti, valm, ymp, xL,
+      yx: budjetti ? y / budjetti : null, yxL: xL ? y / xL : null, nuoret, pot: nuoret.filter((r) => r.rooli && r.sop), loanMin: osT ? osL / osT : null, sp, vuoto: sp ? win.alle12 / sp : null,
+      ilmanArvoa: L.filter((x) => arvo(x) == null).length, kustN: kust.length, kustSum: kust.reduce((a, b) => a + b, 0), perEuro: budjetti ? sum(L, arvo) / budjetti : null };
+  }
+  // Koosteet ilman nimiä hallitukselle
+  const talAgg = (T) => ({ kausi: T.K, total: T.total, owned: T.owned, loanV: T.loanV, win: T.win, muutos: T.muutos, mitattuN: T.mitattu.length, myynnit: T.myynnit, y: T.y, budjetti: T.budjetti, yx: T.yx,
+    xL: TALO() ? T.xL : null, yxL: TALO() ? T.yxL : null, potN: T.pot.length, nuoretN: T.nuoret.length, loanN: T.loan.length, n: T.L.length, loanMin: T.loanMin, vuoto: T.vuoto, sp: T.sp, ilmanArvoa: T.ilmanArvoa, perEuro: T.perEuro,
+    kustSum: TALO() && T.kustN ? T.kustSum : null, kustN: TALO() ? T.kustN : null });
+  const talTeksti = (G) => ['TALOUS JA JOUKKUEEN ARVO KAUDELLA ' + G.kausi + ' (markkina-arvot Transfermarkt; arvio, ei kauppahinta)',
+    '- Joukkueen markkina-arvo ' + eur(G.total) + ': seuran omistama ' + eur(G.owned) + ', lainapelaajat ' + eur(G.loanV) + ' (' + G.loanN + ' lainaa, ' + pctS(G.loanMin) + ' minuuteista)',
+    '- Omistettu arvo sopimuksen mukaan: alle 12 kk ' + eur(G.win.alle12) + ', 12–23 kk ' + eur(G.win.k12_23) + ', 24 kk tai yli ' + eur(G.win.yli24) + (G.vuoto != null ? ' · sopimusvuoto ' + fmt(G.vuoto, 1) + ' kauden sarjapaikan arvoa' : ''),
+    '- Arvonluonti y = arvonmuutos ' + eur(G.muutos) + ' (' + G.mitattuN + ' pelaajaa mitattavissa) + myyntitulot ' + eur(G.myynnit) + ' = ' + eur(G.y),
+    '- y / x: ' + pctS(G.yx) + ' pelaajabudjetista ' + eur(G.budjetti) + (G.yxL != null ? '; ' + pctS(G.yxL) + ' kokonaisinvestoinnista ' + eur(G.xL) + ' (pelaajat, valmennus, ympäristö)' : ''),
+    '- Myyntipotentiaaliset nuoret (enintään 23 v, oma pelaaja, rooli vähintään 20 % minuuteista, sopimus vähintään 24 kk): ' + G.potN + ' / ' + G.nuoretN + ' nuoresta'];
+  function talousKortti(G, note) {
+    if (!G) return null;
+    const box = (lbl, big, sub, cls) => el('div', { style: 'border:1px solid var(--line);border-radius:var(--r-md);padding:12px;display:flex;flex-direction:column;gap:4px;min-width:0' },
+      el('div', { class: 'eyebrow', text: lbl }), el('div', { style: 'font-size:22px;font-weight:650;line-height:1.15' + (cls ? ';color:var(--' + cls + ')' : ''), text: big }), sub ? el('div', { class: 'note', text: sub }) : null);
+    const W = G.win || {}, segs = [['Omistettu, sopimus 24 kk+', W.yli24, 'var(--ok)'], ['Omistettu, 12–23 kk', W.k12_23, 'var(--easy)'], ['Omistettu, alle 12 kk', W.alle12, 'var(--warn)'], ['Lainapelaajat (ei seuran)', G.loanV, 'var(--faint)']].filter((x) => x[1] > 0);
+    const tot = segs.reduce((a, x) => a + x[1], 0) || 1;
+    return el('div', { class: 'card', id: 'tal-kooste' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Talous ja joukkueen arvo kaudella ' + G.kausi }), el('span', { class: 'note', text: note || '' })),
+      el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))' },
+        box('Joukkueen markkina-arvo', eur(G.total), 'Seuran omistama ' + eur(G.owned) + ' · lainat ' + eur(G.loanV)),
+        box('Seuran hallitsema arvo', eur((W.yli24 || 0) + (W.k12_23 || 0)), 'Omistetut pelaajat, joilla sopimusta vähintään 12 kk. Alle 12 kk: ' + eur(W.alle12), (W.yli24 || 0) < (W.alle12 || 0) ? 'warn' : null),
+        box('Arvonluonti y / pelaajabudjetti x', pctS(G.yx), 'y ' + eur(G.y) + ' (arvonmuutos ' + eur(G.muutos) + ' + myynnit ' + eur(G.myynnit) + ') / x ' + eur(G.budjetti) + (G.yxL != null ? ' · kokonaisinvestoinnista ' + pctS(G.yxL) : '')),
+        box('Myyntipotentiaaliset nuoret', fmt(G.potN) + ' / ' + fmt(G.nuoretN), 'Enintään 23 v, oma pelaaja, rooli ≥ 20 % ja sopimus ≥ 24 kk', G.potN ? null : 'bad'),
+        box('Lainapelaajat', fmt(G.loanN) + ' / ' + fmt(G.n), pctS(G.loanMin) + ' joukkueen peliajasta. Lainapelaajan arvonnousu jää lähettävälle seuralle.', G.loanMin > 0.25 ? 'warn' : null),
+        box('Sopimusvuoto', G.vuoto == null ? '—' : fmt(G.vuoto, 1) + ' kautta', 'Alle 12 kk sopimuksilla omistettu arvo sarjapaikan arvoina (' + eur(G.sp) + ' / kausi). Voi lähteä ilman siirtokorvausta.', G.vuoto > 1 ? 'warn' : null)),
+      el('div', { style: 'display:flex;flex-direction:column;gap:6px;margin-top:6px' }, el('div', { class: 'eyebrow', text: 'Kenen arvo ja kuinka pitkään' }),
+        el('div', { style: 'display:flex;height:26px;border-radius:5px;overflow:hidden;background:var(--line)', role: 'img', 'aria-label': segs.map((x) => x[0] + ' ' + eur(x[1])).join(', ') },
+          segs.map(([l, v, c]) => el('div', { title: l + ': ' + eur(v), style: `width:${100 * v / tot}%;background:${c};box-shadow:inset -2px 0 var(--surface);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:var(--on-fill);white-space:nowrap;overflow:hidden` }, 100 * v / tot >= 11 ? eur(v) : ''))),
+        el('div', { class: 'legend' }, segs.map(([l, v, c]) => el('span', null, el('i', { style: 'display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;background:' + c }), l + ' ' + eur(v))))),
+      el('p', { class: 'note', text: 'Markkina-arvo on Transfermarktin arvio, ei kauppahinta' + (G.ilmanArvoa ? '; ' + G.ilmanArvoa + ' pelaajalla ei arviota' : '') + '. Arvonmuutos on mitattavissa vain pelaajista, jotka olivat seurassa jo edellisen kauden lopussa (' + G.mitattuN + '). Yhteyksiä, ei syitä.' }));
+  }
+  const arvonMaarittely = () => el('details', { class: 'sec', id: 'tal-maaritelma', open: true }, el('summary', null, 'Miten pelaajan arvo määritellään'),
+    el('div', { class: 'inner card', style: 'border:none;padding-top:0;display:flex;flex-direction:column;gap:12px' },
+      el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Arvo', 'Mitä se on', 'Mistä se tulee', 'Käyttö tässä työkalussa'].map((h) => el('th', { text: h })))),
+        el('tbody', null, [
+          ['Markkina-arvo', 'Arvio siitä, mitä pelaajasta voisi saada siirtomarkkinoilla. Ei kauppahinta.', 'Transfermarktin toimituksen ja yhteisön arvio. Perusteina mm. ikä, rooli ja peliaika, sarjataso, sopimuksen pituus ja maajoukkue. Päivittyy muutaman kerran vuodessa.', 'Joukkueen arvo, arvonmuutos, kortin Arvo-näkymä'],
+          ['Mallipohjainen arvio', 'Laskentamalli, joka arvioi siirtohinnan suoritusdatasta ja sopimustilanteesta (esim. Goalunitin Fair Price, CIES:n siirtosummamalli).', 'Minuutit, ottelutapahtumat, ikä, sopimuksen pituus, seuran ja sarjan taso. Goalunitilla arvo on nolla, kun sopimusta on alle 3 kk.', 'Ei vielä. Wyscout-data mahdollistaa oman suoritusindeksin vertailuksi.'],
+          ['Seuran hallitsema arvo', 'Markkina-arvo vain pelaajista, jotka seura omistaa ja joilla on sopimusta vähintään 12 kk.', 'Markkina-arvo + sopimus. Lainapelaajan arvo kuuluu lähettävälle seuralle.', 'Hallittu arvo, sopimusikkunat, sopimusvuoto'],
+          ['Toteutunut arvo', 'Siirtosummat, jälleenmyyntiosuudet ja koulutuskorvaukset. Ainoa varma luku.', 'Seuran kirjanpito ja sopimukset.', 'Myyntitulot arvonluonnissa y']].map((r) => el('tr', null, r.map((c, i) => el('td', i ? { text: c } : null, i ? null : el('b', { text: c })))))))),
+      el('p', { class: 'note', text: 'Arvoa nostavat eniten rooli nuorena ja sopimuksen pituus. Valioliigan Goalunit-datassa roolin muutos ja arvon muutos liikkuivat yhdessä (r = 0,43). Portaat-tutkimuksessa markkina-arvo syntyy tasoilla 1–3, kun nuorella on rooli. Arvo nousee siis vain, jos seura omistaa pelaajan pitkällä sopimuksella silloin, kun rooli syntyy.' }),
+      el('p', { class: 'note', text: 'Hammarby-ajattelu (x ja y): investointi x ei ole pelkkä pelaajabudjetti. Valmennukseen, tukihenkilöstöön ja olosuhteisiin sijoitettu raha nostaa arvoa kehityksen ja peliajan kautta, joten laaja x sisältää ne. Siksi työkalu näyttää y / x sekä pelaajabudjetista että kokonaisinvestoinnista.' })));
+  function viewTalous() {
+    const T = talCalc(), A = talAs(), I = talInv(), K = T.K;
+    const num = (id, val, onch, attrs) => el('input', Object.assign({ id, type: 'number', min: '0', step: '1000', value: val == null ? '' : val, disabled: !canWrite, style: 'width:9em', onchange: (e) => onch(e.target.value === '' ? null : Number(e.target.value)) }, attrs || {}));
+    const lab = (t, inp, note) => el('label', { class: 'note', style: 'display:flex;flex-direction:column;gap:4px;min-width:0' }, t, inp, note ? el('span', { class: 'note', style: 'font-size:11.5px', text: note }) : null);
+    // x ja y
+    const xy = el('div', { class: 'card', id: 'tal-xy' }, el('h3', { text: 'Investointi x ja arvonluonti y' }),
+      el('div', { class: 'grid', style: 'grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))' },
+        lab('Pelaajabudjetti ' + K + ' (€)', num('tal-budjetti', A.budjetti, (v) => save('asetukset/talous', { budjetti: v })), 'Palkat, lomarahat, bonukset, edut'),
+        lab('Valmennus ja tukihenkilöstö ' + K + ' (€)', TALO() ? num('tal-valm', I.valmennus, (v) => save('talous/investoinnit', { valmennus: v })) : el('span', { text: 'vain urheilutoimi ja toiminnanjohtaja' }), 'Valmentajat, analyytikot, fysio, lääkäri'),
+        lab('Olosuhteet ja ympäristö ' + K + ' (€)', TALO() ? num('tal-ymp', I.ymparisto, (v) => save('talous/investoinnit', { ymparisto: v })) : el('span', { text: 'vain urheilutoimi ja toiminnanjohtaja' }), 'Kentät, kuntosali, analytiikka, akatemian ja edustuksen välinen porras'),
+        lab('Myyntitulot ' + K + ' (€)', num('tal-myynnit', (A.myynnit || {})[K], (v) => save('asetukset/talous', { myynnit: Object.assign({}, A.myynnit || {}, { [K]: v }) })), A.myynnit_lahde || 'Siirtosummat ja jälleenmyyntiosuudet'),
+        lab('Sarjapaikan arvo / kausi (€)', num('tal-sp', A.sarjapaikka, (v) => save('asetukset/talous', { sarjapaikka: v })), 'Arvio 500–800 k€, tarkistettava')),
+      el('div', { class: 'formula', text: 'y = omien pelaajien arvonmuutos ' + eur(T.muutos) + ' + myyntitulot ' + eur(T.myynnit) + ' = ' + eur(T.y) + '   ·   y / x (pelaajabudjetti) = ' + pctS(T.yx, 1) + (T.yxL != null ? '   ·   y / x (pelaajat + valmennus + ympäristö ' + eur(T.xL) + ') = ' + pctS(T.yxL, 1) : '') }),
+      el('p', { class: 'note', text: 'Arvonmuutos lasketaan vain pelaajista, joilla on arvo sekä nyt että edellisen kauden lopussa (' + T.mitattu.length + ' / ' + T.own.length + ' omaa pelaajaa). Vapaalla siirrolla tulleen pelaajan arvo ei ole seuran luomaa arvoa ennen kuin se nousee seurassa.' }));
+    // nuoret
+    const ok = (b) => el('span', { class: 'pill ' + (b ? 't-ok' : 't-bad'), text: b ? 'kyllä' : 'ei' });
+    const nuoret = el('div', { class: 'card', id: 'tal-nuoret' }, el('h3', { text: 'Nuoret ja myyntipotentiaali' }),
+      el('p', { class: 'note', text: 'Myyntipotentiaali syntyy, kun enintään 23-vuotiaalla omalla pelaajalla on rooli (vähintään 20 % minuuteista) ja sopimusta on vähintään 24 kk. Silloin seura myy oikeaan aikaan, kun sopimusta on 12–23 kk jäljellä. Lainapelaajat eivät ole mukana.' }),
+      T.nuoret.length ? el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Pelaaja', 'Ikä', 'Peliaika', 'Sopimus', 'Markkina-arvo', 'Rooli', 'Sopimus 24 kk+', 'Puuttuu'].map((h, i) => el('th', { class: [1, 2, 4].includes(i) ? 'num' : null, text: h })))),
+        el('tbody', null, T.nuoret.map((r) => el('tr', null, el('td', null, el('b', { text: r.x.nimi }), r.x.oma ? el('span', { class: 'note', text: ' · kasvatti' }) : null), el('td', { class: 'num', text: String(r.a) }), el('td', { class: 'num', text: r.x._osuus == null ? '—' : pctS(r.x._osuus) }),
+          el('td', { text: r.x.sopimus || '—' }), el('td', { class: 'num', text: eur(T.arvo(r.x)) }), el('td', null, ok(r.rooli)), el('td', null, ok(r.sop)),
+          el('td', { class: 'note', text: r.rooli && r.sop ? 'Myyntipotentiaali' : [!r.rooli ? 'rooli (minuutteja tai laina tasolle, jolla rooli)' : null, !r.sop ? 'pidempi sopimus' : null].filter(Boolean).join(' + ') })))))) : el('p', { class: 'note', text: 'Ei enintään 23-vuotiaita omia pelaajia.' }));
+    // pelaajakohtainen kannattavuus
+    const rows = T.L.slice().sort((a, b) => (T.arvo(b) || 0) - (T.arvo(a) || 0));
+    const kann = TALO() ? el('div', { class: 'card', id: 'tal-pelaajat' }, el('h3', { text: 'Pelaajakohtainen kannattavuus' }),
+      el('p', { class: 'note', text: 'Kirjaa pelaajan vuosikustannus (palkka, sivukulut, asunto, agenttipalkkio). Luvut näkyvät vain urheilutoimelle ja toiminnanjohtajalle. Hallitus näkee vain summan. Urheilullinen tuotto = peliaika, taloudellinen tuotto = hallittu arvo ja arvonnousu.' }),
+      el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Pelaaja', 'Ikä', 'Laina', 'Peliaika', 'Sopimus', 'Markkina-arvo', 'Muutos', 'Kustannus / v (€)', 'Arvo / kustannus', 'Peliaika / 10 k€'].map((h, i) => el('th', { class: [1, 3, 5, 6, 8, 9].includes(i) ? 'num' : null, text: h })))),
+        el('tbody', null, rows.map((x) => { const k = talKust(x.id), a = T.arvo(x), ed = numOrNull(x.arvo_ed);
+          return el('tr', null, el('td', { text: x.nimi }), el('td', { class: 'num', text: T.age(x) == null ? '—' : String(T.age(x)) }), el('td', { text: x.laina ? 'laina' : '' }), el('td', { class: 'num', text: x._osuus == null ? '—' : pctS(x._osuus) }), el('td', { text: x.sopimus || '—' }),
+            el('td', { class: 'num', text: eur(a) }), el('td', { class: 'num', text: ed != null && a != null ? (a - ed > 0 ? '+' : '') + eur(a - ed) : '—' }),
+            el('td', null, num('tal-k-' + x.id, k, (v) => save('talous/' + x.id, { kustannus: v }), { step: '500' })),
+            el('td', { class: 'num', text: k && a != null && !x.laina && Number(x.sopimus) > K ? fmt(a / k, 1) : '—', title: 'Hallittu arvo (oma pelaaja, sopimusta yli kauden) jaettuna vuosikustannuksella' }),
+            el('td', { class: 'num', text: k && x._osuus != null ? fmt(100 * x._osuus / (k / 10000), 1) + ' %' : '—' })); }),
+          el('tr', { class: 'sum' }, el('td', { colspan: '7', text: 'Kirjattu ' + T.kustN + ' / ' + T.L.length + ' pelaajalta' }), el('td', { class: 'num', text: eur(T.kustSum) }), el('td', { colspan: '2', class: 'note', text: T.budjetti ? pctS(T.kustSum / T.budjetti) + ' pelaajabudjetista' : '' }))))))
+      : el('div', { class: 'card', id: 'tal-pelaajat' }, el('h3', { text: 'Pelaajakohtainen kannattavuus' }), el('p', { class: 'note', text: 'Pelaajakohtaiset kustannukset näkyvät vain urheilutoimelle ja toiminnanjohtajalle.' }));
+    return el('div', { style: 'display:flex;flex-direction:column;gap:18px' },
+      pageHead('Talous ja joukkueen arvo', 'Paljonko pelaajaryhmä on arvoltaan, kuka arvon omistaa ja tuottaako investointi arvoa. Kausi ' + K + '.'),
+      el('div', { class: 'row jumps' }, el('span', { class: 'note', text: 'Siirry:' }), ['tal-xy|x ja y', 'tal-nuoret|Nuoret', 'tal-pelaajat|Pelaajat', 'tal-maaritelma|Arvon määrittely'].map((v) => { const [id, t] = v.split('|'); return el('button', { type: 'button', class: 'ghost jump', onclick: () => { const q = document.getElementById(id); if (q) q.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, t); })),
+      talousKortti(talAgg(T), 'Hallitus näkee tämän koosteen ilman nimiä, kun raportti julkaistaan'), xy, nuoret, kann, arvonMaarittely());
+  }
+
   function HALL() { return !!(window.__vps && window.__vps.rooli === 'hallitus'); }
-  const VIEWS = { hallitus: viewHallitus, strategia: viewStrategia, sarjat: viewSarjat, pelipaikat: viewPelipaikat, paatokset: viewPaatokset, kayttajat: viewKayttajat };
+  const VIEWS = { hallitus: viewHallitus, strategia: viewStrategia, sarjat: viewSarjat, pelipaikat: viewPelipaikat, talous: viewTalous, paatokset: viewPaatokset, kayttajat: viewKayttajat };
   const current = () => { const h = location.hash.slice(1); if (HALL() && h !== 'strategia') return 'hallitus'; if (h === 'kayttajat' && !UTJ()) return 'hallitus'; return VIEWS[h] ? h : 'hallitus'; };
   function render() {
     const a = document.activeElement;
     if (a && $view.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.closest('form') == null) { pendingRender = true; return; }
     if (a && a.closest && a.closest('form') && $view.contains(a)) { pendingRender = true; return; }
-    pendingRender = false;
+    pendingRender = false; JARJ_NYT = null;
     const v = current();
     document.querySelectorAll('nav a').forEach((n) => { if (n.dataset.view === v) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current'); n.hidden = (HALL() && !['hallitus', 'strategia'].includes(n.dataset.view)) || (n.dataset.view === 'kayttajat' && !UTJ()); });
-    const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : v === 'kayttajat' ? [] : ['kortit'];
+    const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout', 'talous'] : v === 'talous' ? ['pelaajat', 'asetukset', 'wyscout', 'talous'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : v === 'kayttajat' ? [] : ['kortit'];
     if (!db) { return; }
     if (need.some((k) => S[k] === null)) { $view.replaceChildren(el('div', { class: 'empty', text: 'Ladataan…' })); return; }
     $view.replaceChildren(VIEWS[v]()); const dl = explainDialog(); if (dl) { $view.append(dl); setTimeout(() => { const c = document.getElementById('dlg-close'); if (c) c.focus(); }, 0); }
@@ -1416,7 +1574,7 @@ nav a[hidden] { display: none !important; }
     try { const c = u ? await u.can('data.write') : null; canWrite = c !== false; } catch (e) { canWrite = true; }
     $status.textContent = HALL() ? 'Hallituksen näkymä: strategia ja julkaistu raportti' : canWrite ? 'Muutokset tallentuvat seuran Supabase-tietokantaan' : 'Katselutila: sinulla ei ole muokkausoikeutta';
     const sub = (name) => db.collection(name).onSnapshot((snap) => { S[name] = snap.docs.map((x) => Object.assign({ id: x.id }, x.data())); render(); }, () => { S[name] = S[name] || []; $status.textContent = 'Osa tiedoista ei latautunut'; render(); });
-    (HALL() ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'kaudet', 'pelaajat', 'skenaariot', 'asetukset', 'vahvuus', 'wyscout', 'hallitusraportti']).forEach(sub);
+    (HALL() ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'kaudet', 'pelaajat', 'skenaariot', 'asetukset', 'vahvuus', 'wyscout', 'hallitusraportti', 'talous']).forEach(sub);
     render();
   })();
   render();

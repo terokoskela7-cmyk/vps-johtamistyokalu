@@ -15,6 +15,8 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 5. `007_pelaajapolun_mittarit.sql` – Palloliiton tapahtumien mittarit (Huuhkaja- ja Helmariturnaus, maajoukkueet, Tähtitarha)
 6. `008_pelaajapolun_maaritelmat.sql` – laskentasääntö: eri pelaajat vuodessa, ikävaiheet
 7. `009_pelaajapolun_historia.sql` – pelaajapolun toteumat 2020–2026 Portaat-aineistosta
+8. `010_talous.sql` – suojattu talous-kokoelma (pelaajakohtaiset kustannukset vain urheilutoimelle ja toiminnanjohtajalle) ja pelaajabudjetti
+9. Pelaajien markkina-arvot: seuran sisäinen tiedosto `011_arvot_data.sql`, toimitetaan erikseen (ei tässä repossa)
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -43,6 +45,8 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 4.11.2026 | Talous ja arvo -näkymä: joukkueen arvo, hallittu arvo, x ja y (myös valmennus ja ympäristö), myyntipotentiaaliset nuoret, pelaajakohtainen kannattavuus, arvon määrittely; koosteet hallitusraporttiin | 010, 011 |
+| 4.11.2026 | Pelijärjestelmät 4-3-3, 4-2-3-1, 3-4-3, 3-4-2-1, 3-5-2, 5-3-2; pelipaikkojen vapaa siirto kentällä; aloittajatarve järjestelmästä; kortin Arvo-näkymä | – |
 | urheilutoimi, valmennus, analyytikko | kaiken | kaiken |
 | toiminnanjohtaja | kaiken | kaiken paitsi poistot |
 | hallitus | strategian ja julkaistun raportin, ei pelaajia | ei mitään |
