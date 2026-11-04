@@ -1300,11 +1300,29 @@ nav a[hidden] { display: none !important; }
     const KK = (S.kaudet || []).slice().sort((a, b) => b.kausi - a.kausi)[0];
     const yht = sjYhteenveto(KK); const gridEl = root.querySelector(':scope > .grid');
     if (cur === 'sj-yhteenveto') { if (gridEl) gridEl.replaceWith(yht); else root.querySelector('.jumps') && root.querySelector('.jumps').after(yht); }
-    else { if (gridEl) gridEl.remove(); const sec = root.querySelector('#' + cur); const ins = sec ? sjInsight(cur, KK) : null; if (ins) sec.before(ins); }
+    else { if (gridEl) gridEl.remove(); const sec = root.querySelector('#' + cur); const ins = sec ? sjInsight(cur, KK) : null; if (ins) sec.before(ins); if (cur === 'sj-portaikko' && sec) { const ak = sjAkatemia(KK); if (ak) sec.after(ak); } }
     const tabs = el('div', { class: 'subtabs', role: 'tablist', 'aria-label': 'Sarjat-näkymän osiot' }, SJ.filter(([id]) => id === 'sj-yhteenveto' || root.querySelector('#' + id)).map(([id, l]) => el('button', { type: 'button', role: 'tab', class: cur === id ? 'on' : '', 'aria-selected': String(cur === id), onclick: () => { F.sjTab = id; render(); } }, l)));
     const jr = root.querySelector('.jumps'); if (jr) jr.replaceWith(tabs);
     SJ.forEach(([id]) => { const n = root.querySelector('#' + id); if (n && id !== cur) n.remove(); });
     return root;
+  }
+  // Aikuisten porras: VPS Akatemia (Kakkonen) Veikkausliigajoukkueen reservinä
+  function sjAkatemia(K) {
+    const A = (K.aikuiset || {}).akatemia; if (!A) return null; const y = String(K.kausi), p = String(K.kausi - 1), c = A[y], e = A[p]; if (!c) return null;
+    const ch = (k, d) => e && e[k] != null && c[k] != null ? el('span', { class: 'note', text: ' (' + p + ': ' + fmt(e[k], d || 0) + (/osuus/.test(k) ? ' %' : '') + ')' }) : null;
+    const row = (l, k, d, u) => el('tr', null, el('td', { text: l }), el('td', { class: 'num' }, el('b', { text: c[k] == null ? '—' : fmt(c[k], d || 0) + (u || '') }), ch(k, d)));
+    const seg = [['alle 20 v', c.osuus_alle19, 'var(--ok)'], ['20–21 v', c.osuus_20_21, 'var(--easy)'], ['22 v tai yli', c.osuus_22plus, 'var(--warn)']];
+    const sija = (K.aikuiset || {}).sija;
+    return el('div', { class: 'card', id: 'sj-akatemia' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Aikuisten porras: VPS Akatemia (taso 4, Kakkonen) Veikkausliigajoukkueen reservinä' }), el('span', { class: 'note', text: (K.aikuiset.sarja || '') + (sija ? ' · sija ' + sija : '') })),
+      el('p', { style: 'margin:0;font-size:13.5px;line-height:1.5', text: 'Akatemian tehtävä on tuottaa pelaajia Veikkausliigaan. ' + y + ': ' + (c.p18_pelaajia != null ? c.p18_pelaajia + ' P18-pelaajaa pelasi Kakkosta (' + fmt(c.p18_min) + ' min), ' : '') + 'alle 22-vuotiaista ' + c.rooli20_alle21 + ' sai roolin (vähintään 20 % minuuteista) ja ' + c.iso50_alle21 + ' ison roolin (vähintään 50 %). 22 vuotta täyttäneiden osuus minuuteista ' + fmt(c.osuus_22plus, 1) + ' %' + (e ? ' (' + p + ': ' + fmt(e.osuus_22plus, 1) + ' %)' : '') + '. Akatemiassa pelanneista ' + c.myos_vl + ' pelasi myös Veikkausliigaa, ' + c.vl_rooli + ' roolissa.' }),
+      el('div', { style: 'display:flex;flex-direction:column;gap:6px;margin-top:8px' }, el('div', { class: 'eyebrow', text: 'Kenelle Akatemian minuutit menevät ' + y }),
+        el('div', { style: 'display:flex;height:24px;border-radius:5px;overflow:hidden', role: 'img', 'aria-label': seg.map((q) => q[0] + ' ' + q[1] + ' %').join(', ') }, seg.map(([l, v, col]) => el('div', { title: l + ': ' + fmt(v, 1) + ' %', style: `width:${v}%;background:${col};box-shadow:inset -2px 0 var(--surface);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:var(--on-fill);white-space:nowrap;overflow:hidden` }, v >= 10 ? l + ' ' + Math.round(v) + ' %' : ''))),
+        el('div', { class: 'legend' }, seg.map(([l, v, col]) => el('span', null, el('i', { style: 'display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;background:' + col }), l + ' ' + fmt(v, 1) + ' %')))),
+      el('details', { class: 'note', style: 'margin-top:6px' }, el('summary', null, 'Kaikki luvut ' + p + ' → ' + y),
+        el('table', null, el('tbody', null, row('Pelaajia', 'pelaajia'), row('Minuutit', 'minuutit'), row('Alle 20-vuotiaiden osuus minuuteista', 'osuus_alle19', 1, ' %'), row('20–21-vuotiaiden osuus', 'osuus_20_21', 1, ' %'), row('22 vuotta täyttäneiden osuus', 'osuus_22plus', 1, ' %'),
+          row('Alle 22 v roolissa (≥ 20 %)', 'rooli20_alle21'), row('Alle 22 v isossa roolissa (≥ 50 %)', 'iso50_alle21'), row('P18-pelaajia Kakkosessa', 'p18_pelaajia'), row('P18-pelaajien minuutit', 'p18_min'), row('Pelasi myös Veikkausliigaa', 'myos_vl'), row('Veikkausliigassa roolissa (≥ 20 %)', 'vl_rooli'))),
+        el('p', { class: 'note', text: 'Lähde: ' + (K.aikuiset.lahde || 'PalloID') + '. Veikkausliigaa pelanneissa on myös edustuksen pelaajia, jotka pelasivat Akatemiassa peliaikaa varten. Sarjasijoitus kirjataan, kun Kakkosen taulukko on haettu. Yhteyksiä, ei syitä.' })),
+      el('div', { class: 'todo', style: 'margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:13px' }, el('b', { text: 'Toimenpide (urheilujohtaja ja valmennuspäällikkö): ' }), 'Akatemian minuutit ensisijaisesti 17–21-vuotiaille, joilla on polku edustukseen. Seuraa, kuinka moni Akatemian isossa roolissa pelannut saa roolin Veikkausliigassa 12–24 kuukauden sisällä.'));
   }
   // Välilehtikohtainen havainto: mitä data kertoo ja mitä tehdään (valmennuspäällikkö)
   function sjInsight(id, K) {
@@ -1384,7 +1402,7 @@ nav a[hidden] { display: none !important; }
         el('b', { text: r.ikaluokka }), el('span', { class: 'iks', text: lyh(r.syksy_sarja, r.ikaluokka) || '—' }), el('span', { class: 'ikn' }, r.syksy_sija ? r.syksy_sija + '.' : '', a ? el('i', { class: 'ikdot', style: 'background:' + a[1], title: a[0] }) : null)); };
     const strip = (lbl, L) => L.length ? el('div', { class: 'ikrow' }, el('span', { class: 'iklbl', text: lbl }), el('div', { class: 'iktiles' }, L.map(tile))) : null;
     return el('div', { id: 'sj-yhteenveto', style: 'display:flex;flex-direction:column;gap:14px' },
-      el('div', { class: 'grid insights' }, H.map(hc)),
+      el('div', { class: 'grid insights' }, H.map(hc)), sjAkatemia(K),
       el('div', { class: 'card' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Ikäluokat syksyllä ' + K.kausi }), el('span', { class: 'note', text: 'Ikäluokan paras joukkue: sarjataso ja sija' })),
         strip('Pojat', gP), strip('Tytöt', gT),
         el('div', { class: 'legend' }, el('span', null, el('i', { class: 'iksw ok' }), 'ylimmällä tasolla'), el('span', null, el('i', { class: 'iksw miss' }), 'ei ylimmällä tasolla'),
