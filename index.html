@@ -18,7 +18,7 @@
   --ink: #e8ecf0; --muted: #9aa5b1; --faint: #6c7783;
   --accent: #5cc99c; --accent-ink: #0d1a14; --accent-soft: rgba(92,201,156,.14);
   --good: #a9e07e; --mid: #f0d36b; --warn-fill: #f3a964; --bad-fill: #ee8a80; --info: #8ebcf0; --none-fill: #4a535d;
-  --on-fill: #11161b;
+  --on-fill: #11161b; --easy: #8ebcf0;
   --ok: #8fd36a; --warn: #f0a25a; --bad: #f08479; --none: #7f8a95; --gold: #f0d36b;
   --pitch: #1b2128; --pitch-2: #1f262e; --pitch-line: rgba(255,255,255,.32);
   --shadow: 0 8px 24px rgba(0,0,0,.35);
@@ -33,7 +33,7 @@
   --ink: #131a21; --muted: #56626e; --faint: #8a95a0;
   --accent: #1d7a55; --accent-ink: #ffffff; --accent-soft: rgba(29,122,85,.10);
   --good: #bfe8a0; --mid: #f5df8a; --warn-fill: #f7c493; --bad-fill: #f4aea6; --info: #b9d6f6; --none-fill: #d7dce1;
-  --on-fill: #11161b;
+  --on-fill: #11161b; --easy: #2f6fb8;
   --ok: #2f7d3a; --warn: #9a5a0c; --bad: #b2382d; --none: #6c7783; --gold: #8a6a00;
   --pitch: #e6ece8; --pitch-2: #dfe7e2; --pitch-line: rgba(16,24,32,.28);
   --shadow: 0 6px 18px rgba(16,24,32,.10);
@@ -45,7 +45,7 @@
   --ink: #131a21; --muted: #56626e; --faint: #8a95a0;
   --accent: #1d7a55; --accent-ink: #ffffff; --accent-soft: rgba(29,122,85,.10);
   --good: #bfe8a0; --mid: #f5df8a; --warn-fill: #f7c493; --bad-fill: #f4aea6; --info: #b9d6f6; --none-fill: #d7dce1;
-  --on-fill: #11161b;
+  --on-fill: #11161b; --easy: #2f6fb8;
   --ok: #2f7d3a; --warn: #9a5a0c; --bad: #b2382d; --none: #6c7783; --gold: #8a6a00;
   --pitch: #e6ece8; --pitch-2: #dfe7e2; --pitch-line: rgba(16,24,32,.28);
   --shadow: 0 6px 18px rgba(16,24,32,.10);
@@ -1175,10 +1175,10 @@ nav a[hidden] { display: none !important; }
   const ylinOf = (ik) => { const sp = ik[0], a = Number(ik.slice(1)); if (a >= 17) return 1; if (sp === 'P' && a >= 13 && a <= 16) return 2; if (a >= 12) return 3; return 7; };
   const pctv = (a, b) => b ? Math.round(100 * a / b) : null;
   const vmOf = (r) => { const d = (S.vahvuus || []).find((x) => String(x.kausi) === String(r.kausi || String(r.id || '').slice(0, 4))); return d && d.joukkueet ? d.joukkueet[r.id] : null; };
-  const ARV = { 'Liian helppo?': ['Liian helppo?', 'var(--warn)', 't-warn'], 'Liian kova?': ['Liian kova?', 'var(--bad)', 't-bad'], 'Sopiva': ['Sopiva', 'var(--ok)', 't-ok'] };
+  const ARV = { 'Liian helppo?': ['Liian helppo?', 'var(--easy)', 't-acc'], 'Liian kova?': ['Liian kova?', 'var(--warn)', 't-warn'], 'Sopiva': ['Sopiva', 'var(--ok)', 't-ok'] };
   const arvio = (r) => { if ((r.ottelut || 0) < 4) return ['Vähän otteluita', 'var(--muted)', 't-muted']; const vm = vmOf(r); if (vm && vm.a && ARV[vm.a]) return ARV[vm.a]; const k = pctv(r.karki_pisteet, r.karki_max), m = pctv(r.muut_pisteet, r.muut_max);
-    if (r.maaliero_ott >= 2.5 && (k == null || k >= 67)) return ['Liian helppo?', 'var(--warn)', 't-warn'];
-    if (r.maaliero_ott <= -2 || ((k ?? 0) < 20 && (m ?? 0) < 40)) return ['Liian kova?', 'var(--bad)', 't-bad'];
+    if (r.maaliero_ott >= 2.5 && (k == null || k >= 67)) return ['Liian helppo?', 'var(--easy)', 't-acc'];
+    if (r.maaliero_ott <= -2 || ((k ?? 0) < 20 && (m ?? 0) < 40)) return ['Liian kova?', 'var(--warn)', 't-warn'];
     return ['Sopiva', 'var(--ok)', 't-ok']; };
   const tidOf = (r) => String(r.id || '').split('_').pop();
 
@@ -1226,20 +1226,22 @@ nav a[hidden] { display: none !important; }
         ALL.filter((r) => r.ikaluokka === ik.ikaluokka && !r.hh).forEach((r) => { const k = tidOf(r); const cur = teams.get(k); const pref = (x) => (x.kausiosa === osa ? 0 : 1) * 10 + (String(x.taso).startsWith('Karsinta') ? 1 : 0); if (!cur || pref(r) < pref(cur)) teams.set(k, r); });
         const byCol = {};
         [...teams.values()].sort((a, b) => a.taso_nro - b.taso_nro || (a.sija || 99) - (b.sija || 99)).forEach((r) => { const key = Math.min(9, Math.ceil(r.taso_nro)); (byCol[key] = byCol[key] || []).push(r); });
+        if (!byCol[yl]) svg.append(sv('rect', { x: cx(yl) - cw / 2 + 3, y: y - RH / 2 + 4, width: cw - 6, height: RH - 8, rx: 5, fill: 'none', stroke: 'var(--warn)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }), sv('text', { x: cx(yl), y: y + 4, 'text-anchor': 'middle', 'font-size': 10.5, fill: 'var(--muted)', text: 'puuttuu' }));
         Object.entries(byCol).forEach(([key, list]) => {
           const n = list.length, step = 14, x0 = cx(Number(key)) - (n - 1) * step / 2 - (n > 1 ? 0 : 0);
           list.forEach((r, k) => { const a = arvio(r); const kars = String(r.taso).startsWith('Karsinta') || r.taso === 'SM-karsinta'; const x = (n === 1 ? cx(Number(key)) - 14 : x0 - 14 + k * step);
             svg.append(sv('g', null, sv('title', { text: `${r.joukkue} · ${r.sarja} (${r.kausiosa}) · ${r.sija}./${r.joukkueita} · kärkeä vastaan ${pctv(r.karki_pisteet, r.karki_max) ?? '–'} % · ${a[0]}` }),
               sv('circle', { cx: x, cy: y, r: 6, fill: kars ? 'var(--panel)' : a[1], stroke: n > 1 ? 'var(--panel)' : a[1], 'stroke-width': kars ? 2 : 1.5 }))); });
           const lx = (n === 1 ? cx(Number(key)) - 14 : x0 - 14 + (n - 1) * step) + 10;
-          svg.append(sv('text', { x: lx, y: y + 4, 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)', text: n === 1 ? list[0].sija + '.' : n + ' jo.' }));
+          svg.append(sv('text', { x: lx, y: y + 4, 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)', text: n === 1 ? list[0].sija + '.' : n + ' joukk.' }));
         });
       });
       return el('div', { class: 'card', id: 'sj-portaikko' }, el('div', { class: 'row', style: 'justify-content:space-between' }, el('h3', { text: 'Portaikko: millä tasolla VPS:n joukkueet pelaavat (' + (osa === 'kevät' ? 'kevät' : 'syksy') + ')' })),
         el('p', { class: 'note', text: 'Rivi = ikäluokka, sarake = sarjataso. Vihreä tausta = ikäluokan ylin taso (seura vahvistaa). Jokainen piste on VPS:n joukkue; numero on sarjasija tai joukkueiden määrä samalla tasolla. Väri kertoo tasoarvion. Rengas = karsintasarja. Vie hiiri pisteen päälle nähdäksesi joukkueen.' }),
         el('div', { class: 'tw' }, el('div', { style: 'min-width:560px' }, svg)),
-        el('div', { class: 'legend' }, [['Sopiva', 'var(--ok)'], ['Liian helppo?', 'var(--warn)'], ['Liian kova?', 'var(--bad)']].map(([t, c]) => el('span', null, el('i', { style: 'display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:' + c }), t)),
-          el('span', null, el('i', { style: 'display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:5px;background:var(--accent-soft)' }), 'Ikäluokan ylin taso')));
+        el('div', { class: 'legend' }, [['Sopiva taso', 'var(--ok)'], ['Liian helppo?', 'var(--easy)'], ['Liian kova?', 'var(--warn)'], ['Vähän otteluita', 'var(--muted)']].map(([t, c]) => el('span', null, el('i', { style: 'display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:' + c }), t)),
+          el('span', null, el('i', { style: 'display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:5px;background:var(--accent-soft)' }), 'Ikäluokan ylin taso'),
+          el('span', null, el('i', { style: 'display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:5px;border:1.5px dashed var(--warn)' }), 'Ylin taso, ei VPS-joukkuetta')));
     };
 
     // --- Tasoarvion hajontakuva
@@ -1247,15 +1249,14 @@ nav a[hidden] { display: none !important; }
     const order = (r) => [r.sukupuoli === 'Pojat' ? 0 : 1, r.ika || 0, r.taso_nro, r.sija || 99];
     rows.sort((a, b) => { const x = order(a), y = order(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; });
     const scatter = () => {
-      const W = 760, H = 400, m = { l: 52, r: 24, t: 18, b: 42 }, X = (v) => m.l + v / 100 * (W - m.l - m.r), Y = (v) => H - m.b - v / 100 * (H - m.t - m.b);
+      const W = 760, H = 400, m = { l: 52, r: 24, t: 16, b: 42 }, X = (v) => m.l + v / 100 * (W - m.l - m.r), Y = (v) => H - m.b - v / 100 * (H - m.t - m.b);
       const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': 'Joukkueet: pisteprosentti kärkeä ja muita vastaan' });
       [0, 25, 50, 75, 100].forEach((v) => { svg.append(sv('line', { x1: X(0), x2: X(100), y1: Y(v), y2: Y(v), stroke: 'var(--line)' })); svg.append(sv('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)', text: v + ' %' }));
         svg.append(sv('line', { x1: X(v), x2: X(v), y1: Y(0), y2: Y(100), stroke: 'var(--line)' })); svg.append(sv('text', { x: X(v), y: H - m.b + 16, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)', text: v + ' %' })); });
       svg.append(sv('line', { x1: X(50), x2: X(50), y1: Y(0), y2: Y(100), stroke: 'var(--muted)', 'stroke-dasharray': '4 4' }));
       svg.append(sv('line', { x1: X(0), x2: X(100), y1: Y(50), y2: Y(50), stroke: 'var(--muted)', 'stroke-dasharray': '4 4' }));
       const q = (x, y, a, t) => svg.append(sv('text', { x, y, 'text-anchor': a, 'font-size': 11, 'font-weight': 600, fill: 'var(--muted)', stroke: 'var(--panel)', 'stroke-width': 4, 'paint-order': 'stroke', text: t }));
-      q(X(62), Y(86), 'start', 'Voittaa kaikki: liian helppo?'); q(X(25), Y(86), 'middle', 'Pärjää kärjelle, ei muille');
-      svg.append(sv('text', { x: X(75), y: Y(50) + 16, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)', text: 'Voittaa muut, häviää kärjelle: sopiva' })); svg.append(sv('text', { x: X(25), y: Y(50) + 16, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)', text: 'Häviää kaikille: liian kova?' }));
+      // nelikentän tulkinta on kuvan alla selitteessä, jotta tekstit eivät peitä pisteitä
       svg.append(sv('text', { x: (X(0) + X(100)) / 2, y: H - 6, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--ink)', text: 'Pisteprosentti muita joukkueita vastaan' }));
       svg.append(sv('text', { x: 14, y: (Y(0) + Y(100)) / 2, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--ink)', transform: `rotate(-90 14 ${(Y(0) + Y(100)) / 2})`, text: 'Pisteprosentti kärkeä vastaan' }));
       const pts = rows.filter((r) => r.karki_max && r.muut_max);
@@ -1269,7 +1270,9 @@ nav a[hidden] { display: none !important; }
           if (ly < 10 || ly > H - 4) continue;
           if (!boxes.some((o) => !(b[2] < o[0] || b[0] > o[2] || b[3] < o[1] || b[1] > o[3]))) { boxes.push(b); labels.push(sv('text', { x: lx, y: ly, 'font-size': 10.5, fill: 'var(--ink)', 'font-family': 'var(--f-data)', stroke: 'var(--panel)', 'stroke-width': 3, 'paint-order': 'stroke', text: txt })); break; } } });
       labels.forEach((l) => svg.append(l));
-      return el('div', { class: 'tw' }, el('div', { style: 'min-width:520px' }, svg));
+      const qd = (c, t) => el('span', null, el('i', { style: 'display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:' + c }), t);
+      return el('div', null, el('div', { class: 'tw' }, el('div', { style: 'min-width:520px' }, svg)),
+        el('div', { class: 'legend' }, qd('var(--ok)', 'Sopiva: voittaa muut, häviää kärjelle (oikea alakulma)'), qd('var(--easy)', 'Liian helppo?: voittaa kaikki (oikea yläkulma)'), qd('var(--warn)', 'Liian kova?: häviää kaikille (vasen alakulma)'), qd('var(--muted)', 'Vähän otteluita')));
     };
     const ikOpts = [...new Set(ALL.map((r) => r.ikaluokka))].filter((x) => x && /^[PT]\d+$/.test(x)).sort((a, b) => (a[0] === b[0] ? Number(a.slice(1)) - Number(b.slice(1)) : (a[0] === 'P' ? -1 : 1)));
     const filters = el('div', { class: 'filters' },
@@ -1321,17 +1324,17 @@ nav a[hidden] { display: none !important; }
             el('td', null, el('span', { class: 'pill ' + (Math.min(tt.kytkevia || 0, T[i - 1].kytkevia || 0) >= 8 ? 't-ok' : Math.min(tt.kytkevia || 0, T[i - 1].kytkevia || 0) >= 3 ? 't-warn' : 't-none'), text: Math.min(tt.kytkevia || 0, T[i - 1].kytkevia || 0) >= 8 ? 'Hyvä' : Math.min(tt.kytkevia || 0, T[i - 1].kytkevia || 0) >= 3 ? 'Kohtalainen' : 'Oletus' })))); }).flat()))),
         el('p', { class: 'note', text: 'Lähde: ' + (d.lahde || 'Taso-tulospalvelu') + '. Malli: ' + (d.malli || '') + '. Yhteyksiä, ei syitä.' })); })();
     // --- Putki + lopettajat-vertailu
-    const putki = (() => { const PU = K.putki; if (!PU) return null; const ST = ['Nousi parempaan joukkueeseen', 'Pysyi samalla portaalla', 'Siirtyi alempaan joukkueeseen', 'Lopetti tai siirtyi']; const SC = { 'Nousi parempaan joukkueeseen': 'var(--ok)', 'Pysyi samalla portaalla': 'var(--accent)', 'Siirtyi alempaan joukkueeseen': 'var(--warn)', 'Lopetti tai siirtyi': 'var(--bad)' };
+    const putki = (() => { const PU = K.putki; if (!PU) return null; const ST = ['Nousi parempaan joukkueeseen', 'Pysyi samalla portaalla', 'Siirtyi alempaan joukkueeseen', 'Lopetti tai siirtyi']; const SC = { 'Nousi parempaan joukkueeseen': 'var(--ok)', 'Pysyi samalla portaalla': 'var(--info)', 'Siirtyi alempaan joukkueeseen': 'var(--warn)', 'Lopetti tai siirtyi': 'var(--none)' };
       const T = (PU.tilat_syntymavuosittain || []).filter((r) => ST.reduce((s, k) => s + (r[k] || 0), 0) >= 5);
       const LJ = (PU.lopettajat_vs_jatkajat || []).filter((r) => r.lopetti && r.jatkoi && r.lopetti.pelaajia >= 5);
       const YM = (PU.ylos_maara || []).filter((r) => r.ylos_pelaajia >= 5);
       const maxO = Math.max(1, ...LJ.map((r) => Math.max(r.lopetti.ottelut_md, r.jatkoi.ottelut_md)));
-      const pair = (a, b, max, unit) => el('div', { class: 'pair' }, [[a, 'var(--bad)', 'Lopetti'], [b, 'var(--ok)', 'Jatkoi']].map(([v, c, t]) => el('div', { class: 'pairrow' }, el('span', { class: 'req', text: t }), el('div', { class: 'pairbar' }, el('div', { style: `width:${100 * v / max}%;background:${c}` })), el('span', { class: 'req', text: fmt(v) + unit }))));
+      const pair = (a, b, max, unit) => el('div', { class: 'pair' }, [[a, 'var(--none)', 'Lopetti'], [b, 'var(--ok)', 'Jatkoi']].map(([v, c, t]) => el('div', { class: 'pairrow' }, el('span', { class: 'req', text: t }), el('div', { class: 'pairbar' }, el('div', { style: `width:${100 * v / max}%;background:${c}` })), el('span', { class: 'req', text: fmt(v) + unit }))));
       return el('div', { class: 'card', id: 'sj-putki' }, el('h3', { text: 'Pelaajaputki ' + PU.kaudet.join('→') + ': mihin pelaajat menivät' }),
         el('p', { class: 'note', text: 'Jokainen kaudella ' + PU.kaudet[0] + ' VPS:n otteluissa pelannut alle 19-vuotias: nousiko hän ikäluokan parempaan VPS-joukkueeseen, pysyikö samalla portaalla, siirtyikö alempaan vai lopettiko (tai siirtyi muualle).' }),
         el('div', { class: 'legend' }, ST.map((k) => el('span', null, el('i', { style: 'display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:' + SC[k] }), k))),
         el('div', { style: 'display:flex;flex-direction:column;gap:6px' }, T.map((r) => { const tot = ST.reduce((s, k) => s + (r[k] || 0), 0); return el('div', { style: 'display:grid;grid-template-columns:3.2rem 1fr 3rem;gap:8px;align-items:center' }, el('span', { class: 'req', text: String(r.synt) }),
-          el('div', { style: 'display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--line)', role: 'img', 'aria-label': r.synt + ': ' + ST.map((k) => k + ' ' + (r[k] || 0)).join(', ') }, ST.map((k) => (r[k] ? el('div', { title: k + ': ' + r[k], style: `width:${100 * r[k] / tot}%;background:${SC[k]}` }) : null))),
+          el('div', { style: 'display:flex;height:22px;border-radius:4px;overflow:hidden;background:var(--line)', role: 'img', 'aria-label': r.synt + ': ' + ST.map((k) => k + ' ' + (r[k] || 0)).join(', ') }, ST.map((k) => (r[k] ? el('div', { title: k + ': ' + r[k] + ' (' + Math.round(100 * r[k] / tot) + ' %)', style: `width:${100 * r[k] / tot}%;background:${SC[k]};box-shadow:inset -2px 0 var(--surface);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--on-fill);overflow:hidden;white-space:nowrap` }, 100 * r[k] / tot >= 9 ? Math.round(100 * r[k] / tot) + ' %' : '') : null))),
           el('span', { class: 'req', text: fmt(tot) })); })),
         el('h3', { text: 'Ketkä lopettivat: lopettaneet verrattuna jatkaneisiin', style: 'margin-top:10px' }),
         el('p', { class: 'note', text: 'Vasen: kauden ' + PU.kaudet[0] + ' otteluiden mediaani. Oikea: osuus, joka pelasi ikäluokan parhaassa VPS-joukkueessa.' }),

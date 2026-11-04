@@ -13,6 +13,7 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 3. `005_oikeudet.sql` – rajapinnan oikeudet kirjautuneille
 4. `006_kayttajahallinta_ja_tavoitteet.sql` – käyttäjähallinta työkalussa ja tavoitteiden lukuarvot graafeja varten
 5. `007_pelaajapolun_mittarit.sql` – Palloliiton tapahtumien mittarit (Huuhkaja- ja Helmariturnaus, maajoukkueet, Tähtitarha)
+6. `008_pelaajapolun_maaritelmat.sql` – laskentasääntö: eri pelaajat vuodessa, ikävaiheet
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -51,6 +52,8 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Muutoshistoria
 | Päivä | Muutos | Migraatio |
 | --- | --- | --- |
+| 4.11.2026 | Sarjat ja pysyvyys: värit erottuvat myös värisokeille, puuttuva ylin taso merkitty, nelikentän selite kuvan alle, putken osuudet näkyviin | – |
+| 4.11.2026 | Pelaajapolun mittareiden laskentasääntö | 008 |
 | 4.11.2026 | Pelaajapolun mittarit: Huuhkajaturnaus, Helmariturnaus, maajoukkueet pojat ja tytöt, Tähtitarha | 007 |
 | 4.11.2026 | Mittarin lisäys, muokkaus ja poisto Strategia-näkymässä | – |
 | 4.11.2026 | Mittarigraafit 2024–2030 Strategia- ja Hallitus-näkymissä | 006 (tavoitteiden lukuarvot) |
