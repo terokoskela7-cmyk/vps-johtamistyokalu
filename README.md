@@ -54,6 +54,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 6.11.2026 | Mittarieditori: pelipaikan laatuprofiilin ja Taso-pisteiden Wyscout-mittarit valitaan, lisätään, poistetaan, nimetään, ryhmitellään ja järjestetään samassa taulukossa (Pelaajaryhmä → Mittarit ja Rekrytointi → Profiili); Palauta Portaat-pohja | – |
 | 6.11.2026 | Kenttäkuvat (Pelaajaryhmä ja rekrytoinnin varjokenttä) skaalautuvat: kortit riveihin ilman päällekkäisyyttä, pysyvät kentän sisällä ja kentän korkeus mukautuu sisältöön ja leveyteen | – |
 | 6.11.2026 | Rekrytointi viitenä vaiheena: 1 Tarve (pelipaikat syineen, akatemian vaihtoehto, urheilujohtaja merkitsee haussa olevat), 2 Profiili (rooli, reunaehdot, hyväksyjä, mittarit), 3 Haku (ehdokkaat ja laatuprofiili), 4 Seuranta (kohdelista ja varjokenttä), 5 Päätös (tietopaketti ja päätöskortti) | – |
 | 6.11.2026 | Laatuprofiili (StatsBombin pelipaikkapohjat ja FBrefin persentiiliraportti): pelaajakortissa, kenttäkuvan Laatu-näkymässä, rekrytoinnin ehdokashaussa (Laatu-sarake ja profiili klikkaamalla) ja kohteen tietopaketissa vertailuna parhaaseen omaan pelaajaan | – |

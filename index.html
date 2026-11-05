@@ -289,6 +289,7 @@ ul.plain { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-di
 .rksteps button[aria-current="step"] { border-color: var(--accent); background: var(--accent-soft); }
 .rksteps .rkn { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); font-weight: 700; }
 .rksteps button[aria-current="step"] .rkn { background: var(--accent); color: var(--accent-ink); }
+.mtaulu { display: flex; flex-direction: column; gap: 8px; min-width: 0; } .mtaulu td { vertical-align: middle; } .mtaulu td:last-child { white-space: nowrap; } .mtaulu td:last-child button { margin-left: 4px; } .mtaulu select, .mtaulu input { max-width: 100%; }
 .lpcard { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .lpbars { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 10px 18px; }
 .lpgrp { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
@@ -904,9 +905,42 @@ nav a[hidden] { display: none !important; }
   };
   const LP_MIN_LUOTETTAVA = 900;   // FBref/StatsBomb-käytäntö: alle ~10 ottelun minuuteilla persentiili heiluu
   const lpRows = (pid, d, r) => { if (!d || !r) return []; const p = (S.paikat || []).find((q) => q.id === pid); const K = ((p && p.kpit) || []).filter((k) => k.lahde === 'wyscout' && k.col);
-    const pohja = (LP_POHJA[pid] || []).slice(); K.forEach((k) => { if (!pohja.some((z) => z[0] === k.col)) pohja.push([k.col, k.n || k.col, 'H', k.suunta === 'alle']); });
+    const pohja = lpPohja(p, pid).map((z) => [z.col, z.n, z.cat, z.rev]); K.forEach((k) => { if (!pohja.some((z) => z[0] === k.col)) pohja.push([k.col, k.n || k.col, 'H', k.suunta === 'alle']); });
     return pohja.map(([col, lab, cat, rev]) => { const ci = d.cols.indexOf(col); if (ci < 0) return null; const v = wyVal(r, col, d); const kk = K.find((k) => k.col === col); const pc = pctOf(d, ci, v, kk ? kk.suunta === 'alle' : !!rev);
       return pc == null ? null : { col, lab, cat, pc, v, kpi: !!kk, t: kk ? Number(kk.t) || 70 : null }; }).filter(Boolean); };
+  // Seuran oma mittaripohja pelipaikalle (paikat.lp_pohja); oletuksena Portaat-pohja
+  const LP_NIMI = Object.fromEntries(Object.values(LP_POHJA).flat().map((z) => [z[0], z[1]]));
+  const lpPohja = (p, pid) => { const L = p && Array.isArray(p.lp_pohja) ? p.lp_pohja : (LP_POHJA[pid || (p && p.id)] || []).map(([col, n, cat, rev]) => ({ col, n, cat, rev: !!rev }));
+    const K = ((p && p.kpit) || []).filter((k) => k.lahde === 'wyscout' && k.col); const out = L.map((z) => Object.assign({}, z));
+    K.forEach((k) => { if (!out.some((z) => z.col === k.col)) out.push({ col: k.col, n: k.n || LP_NIMI[k.col] || k.col, cat: 'H', rev: k.suunta === 'alle' }); }); return out; };
+  // Mittarieditori: valitse, lisää, poista; ★ = mukana Taso-pisteissä tavoitepersentiilillä. Tallentaa lp_pohja ja kpit yhdessä.
+  const mittariTaulu = (p) => { const mt = wyMeta(), d0 = wyDoc(p.id); const COLS = (d0 && d0.cols) || (mt && mt.cols) || [];
+    const L = lpPohja(p), K = (p.kpit || []), OMA = K.filter((k) => k.lahde !== 'wyscout');
+    const tasoOf = (col) => K.find((k) => k.lahde === 'wyscout' && k.col === col);
+    const put = (rows) => { const kp = rows.filter((z) => z.taso && z.col).map((z) => ({ lahde: 'wyscout', col: z.col, n: z.n || LP_NIMI[z.col] || z.col, t: Number(z.t) || 60, suunta: z.rev ? 'alle' : 'yli' }));
+      save('paikat/' + p.id, { lp_pohja: rows.filter((z) => z.col).map((z) => ({ col: z.col, n: z.n || LP_NIMI[z.col] || z.col, cat: z.cat || 'H', rev: !!z.rev })), kpit: kp.concat(OMA) }); };
+    const cur = () => L.map((z) => { const k = tasoOf(z.col); return Object.assign({}, z, { taso: !!k, t: k ? k.t : 60 }); });
+    const set = (i, upd) => { const a = cur(); Object.assign(a[i], upd); put(a); };
+    const dis = !canWrite;
+    const rows = cur().map((z, i) => el('tr', null,
+      el('td', { style: 'min-width:14em' }, el('select', { id: 'mt-' + p.id + '-' + i + '-c', disabled: dis || !COLS.length, style: 'width:100%', onchange: (e) => { e.target.blur(); const c = e.target.value; if (cur().some((q, j) => j !== i && q.col === c)) { toast('Mittari on jo listalla'); render(); return; } set(i, { col: c, n: LP_NIMI[c] || c }); } },
+        (COLS.includes(z.col) ? [] : [el('option', { value: z.col, selected: true }, z.col + ' (ei viennissä)')]).concat(COLS.map((c) => el('option', { value: c, selected: z.col === c }, c))))),
+      el('td', null, el('input', { id: 'mt-' + p.id + '-' + i + '-n', value: z.n || '', disabled: dis, style: 'width:100%;min-width:10em', onchange: (e) => set(i, { n: e.target.value }) })),
+      el('td', null, el('select', { id: 'mt-' + p.id + '-' + i + '-g', disabled: dis, onchange: (e) => { e.target.blur(); set(i, { cat: e.target.value }); } }, Object.entries(LP_CAT).map(([k, [t]]) => el('option', { value: k, selected: (z.cat || 'H') === k }, t)))),
+      el('td', null, el('select', { id: 'mt-' + p.id + '-' + i + '-s', disabled: dis, onchange: (e) => { e.target.blur(); set(i, { rev: e.target.value === 'alle' }); } }, [['yli', 'isompi parempi'], ['alle', 'pienempi parempi']].map(([v, l]) => el('option', { value: v, selected: (z.rev ? 'alle' : 'yli') === v }, l)))),
+      el('td', null, el('label', { class: 'chk' }, el('input', { type: 'checkbox', id: 'mt-' + p.id + '-' + i + '-k', checked: z.taso, disabled: dis, onchange: (e) => { e.target.blur(); set(i, { taso: e.target.checked }); } }), '★ Taso')),
+      el('td', null, z.taso ? el('input', { id: 'mt-' + p.id + '-' + i + '-t', type: 'number', min: '1', max: '99', value: z.t, disabled: dis, style: 'width:4.5em', onchange: (e) => set(i, { t: Number(e.target.value) || 60 }) }) : el('span', { class: 'sm', text: '—' })),
+      el('td', null, el('button', { type: 'button', class: 'ghost small', disabled: dis || i === 0, title: 'Siirrä ylös', onclick: () => { const a = cur(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; put(a); } }, '↑'),
+        el('button', { type: 'button', class: 'danger small', disabled: dis, onclick: () => put(cur().filter((_, j) => j !== i)) }, 'Poista'))));
+    const nT = cur().filter((z) => z.taso).length;
+    return el('div', { class: 'mtaulu' },
+      el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Wyscout-mittari', 'Nimi korteissa', 'Ryhmä', 'Suunta', 'Taso-pisteisiin', 'Tavoite (pers.)', ''].map((h) => el('th', { text: h })))), el('tbody', null, rows))),
+      el('div', { class: 'row' },
+        el('button', { type: 'button', disabled: dis || !COLS.length, onclick: () => { const c = COLS.find((x) => !cur().some((z) => z.col === x)); if (!c) return; put(cur().concat([{ col: c, n: LP_NIMI[c] || c, cat: 'H', rev: false, taso: false }])); } }, '+ Lisää mittari'),
+        el('button', { type: 'button', class: 'ghost', disabled: dis || !LP_POHJA[p.id], onclick: () => { const a = (LP_POHJA[p.id] || []).map(([col, n, cat, rev]) => ({ col, n, cat, rev: !!rev, taso: !!tasoOf(col), t: tasoOf(col) ? tasoOf(col).t : 60 })); put(a); } }, 'Palauta Portaat-pohja'),
+        el('span', { class: 'note', text: cur().length + ' mittaria laatuprofiilissa, joista ' + nT + ' Taso-pisteissä. Suositus: 8–10 profiiliin, 3–5 Taso-pisteisiin pelipaikan roolin mukaan.' })),
+      !COLS.length ? el('p', { class: 'note', style: 'color:var(--warn)', text: 'Tuo Wyscout-data, niin mittarit voi valita listasta.' }) : null,
+      OMA.length ? el('p', { class: 'note', text: 'Lisäksi omia arvioita Taso-pisteissä: ' + OMA.map((k) => k.n || '—').join(', ') + ' (muokataan Pelaajaryhmä-näkymän mittareista).' }) : null); };
   const lpScore = (R) => R.length ? Math.round(R.reduce((a, q) => a + q.pc, 0) / R.length) : null;
   // oma pelaaja: vertailu työkalun pelipaikan vientiin (sama kuin Taso)
   // oma pelaaja: vertailu hänen Wyscout-pelipaikkansa pelaajiin (StatsBomb: pohja pelaajan todellisen pelipaikan mukaan)
@@ -1287,8 +1321,10 @@ nav a[hidden] { display: none !important; }
           el('label', null, 'Aloittajia tarvitaan', el('input', { id: 'pe-tarve', type: 'number', min: '1', max: '4', value: tarveOf(ed), disabled: true, title: 'Määräytyy pelijärjestelmästä' }), el('span', { class: 'note', text: 'Pelijärjestelmästä ' + jarjOf(skOf(F.skenaario)) })),
           el('label', null, 'Pelaajia tavoitteena', el('input', { id: 'pe-syv', type: 'number', min: '1', max: '8', value: syvTarve(ed), disabled: !canWrite, onchange: (e) => save('paikat/' + ed.id, { syvyys: Number(e.target.value) || null }) }))),
         el('div', { class: 'formula', text: 'Taso = mittarien pisteiden keskiarvo. Wyscout-mittari: pelaajan persentiili Veikkausliigan saman pelipaikan pelaajiin (vähintään ' + ((d && d.minmin) || 450) + ' min) → 10 × min(1; persentiili / tavoitepersentiili). Pelipaikan arvo = aloittajat 70 % + muut 30 %. Oma arvio: 10 × min(1; toteuma / tavoite).' + (TC.sc != null ? ' Nyt: Taso ' + f1(TC.sc) + '.' : '') }),
-        el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Lähde', 'Mittari', 'Tavoite', 'Suunta', 'Toteuma', 'Pisteet', ''].map((h, j) => el('th', { class: j === 5 ? 'num' : null, text: h })))), el('tbody', null, rowsK))),
-        el('div', { class: 'row' }, el('button', { type: 'button', disabled: !canWrite, onclick: () => put(K.concat([{ lahde: COLS.length ? 'wyscout' : 'oma', n: '', col: null, t: COLS.length ? 70 : null, suunta: 'yli' }])) }, 'Lisää mittari'),
+        el('h4', { text: 'Wyscout-mittarit: laatuprofiili ja Taso', style: 'margin:6px 0 0' }), mittariTaulu(ed),
+        el('h4', { text: 'Omat arviot (esim. valmennuksen arvio, testit)', style: 'margin:10px 0 0' }),
+        rowsK.some((r, i) => K[i].lahde !== 'wyscout') ? el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Lähde', 'Mittari', 'Tavoite', 'Suunta', 'Toteuma', 'Pisteet', ''].map((h, j) => el('th', { class: j === 5 ? 'num' : null, text: h })))), el('tbody', null, rowsK.filter((r, i) => K[i].lahde !== 'wyscout')))) : null,
+        el('div', { class: 'row' }, el('button', { type: 'button', disabled: !canWrite, onclick: () => put(K.concat([{ lahde: 'oma', n: '', col: null, t: null, suunta: 'yli' }])) }, '+ Lisää oma arvio'),
           el('span', { class: 'note', text: COLS.length ? 'Suositus: 4–6 mittaria pelipaikkaa kohden, sekä pallon kanssa että ilman palloa.' : 'Tuo Wyscout-data alla olevasta osiosta, niin mittarit voi valita listasta.' })),
         bars.length ? el('div', { class: 'kpis' }, bars) : null,
         el('div', { class: 'ref' }, el('div', { class: 'eyebrow', text: 'Kansainvälinen viite: CIES Performance Tool 2026' }), el('div', { class: 'req', text: ed.vaatimus || '—' }),
@@ -2039,9 +2075,9 @@ nav a[hidden] { display: none !important; }
     const KP = p ? (p.kpit || []).filter((k) => k.lahde === 'wyscout' && k.col) : [];
     const profOk = p && p.profiili && p.profiili.rooli && p.profiili.hyvaksyja;
     const profiili = el('div', { style: 'display:flex;flex-direction:column;gap:12px' }, pChips, p ? rkProfiili(p) : null,
-      el('div', { class: 'card' }, el('h3', { text: 'Mittarit, joilla ehdokkaat arvioidaan' }),
-        KP.length ? el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Mittari', 'Wyscout', 'Tavoitepersentiili'].map((h, i) => el('th', { class: i === 2 ? 'num' : null, text: h })))), el('tbody', null, KP.map((k) => el('tr', null, el('td', { text: k.n || k.col }), el('td', { class: 'sm', text: k.col }), el('td', { class: 'num', text: String(k.t || 70) })))))) : el('p', { class: 'note', style: 'color:var(--warn)', text: 'Pelipaikalle ei ole valittu mittareita.' }),
-        el('p', { class: 'note', text: 'Mittarit ja tavoitteet muutetaan Pelaajaryhmä-näkymässä (pelipaikan Mittarit-painike), jotta omat pelaajat ja ehdokkaat arvioidaan samalla tavalla.' }),
+      el('div', { class: 'card' }, el('h3', { text: 'Mittarit: laatuprofiili ja Taso-pisteet' }),
+        p ? mittariTaulu(p) : null,
+        el('p', { class: 'note', text: 'Samat mittarit näkyvät Pelaajaryhmä-näkymässä, joten omat pelaajat ja ehdokkaat arvioidaan samalla tavalla. Valitse mittarit pelipaikan roolin mukaan: mitä pelaaja tekee pelitavassa pallon kanssa ja ilman.' }),
         el('div', { class: 'row' }, el('button', { type: 'button', onclick: () => go(3) }, 'Hae ehdokkaita →'), !profOk ? el('span', { class: 'note', style: 'color:var(--warn)', text: 'Profiilista puuttuu rooli tai hyväksyjä. Kirjaa ne ennen hakua.' }) : el('span', { class: 'note', text: 'Profiili hyväksytty: ' + p.profiili.hyvaksyja }))));
     const paat = R.filter((x) => ['Kohde', 'Neuvottelu'].includes(x.tila));
     const selX = F.rkSel && R.find((x) => x.id === F.rkSel);
