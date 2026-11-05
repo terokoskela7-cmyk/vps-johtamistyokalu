@@ -24,6 +24,8 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 14. `016_wfa_valinnat.sql` – WFA:n pelaajat mukaan Huuhkaja- ja Helmariturnauksen valintoihin
 15. `017_tahtitarha_palloid.sql` – Tähtitarha 2023–2026 PalloID-aineistosta
 16. `018_tietoturva_ja_suorituskyky.sql` – säännöt hakevat roolin kerran kyselyssä, urheilujohtajan päätös suojattu tietokannassa, muokkaaja kirjautumisesta, anon-oikeudet pois
+17. `019_vertailu.sql` – kokoelma vertailu (Pohjoismaat ja Veikkausliiga -vertailu Pelaajaryhmä-näkymään)
+18. Wyscout 2026 -data ja vertailun luvut: seuran sisäinen tiedosto `020_wyscout_2026_data.sql` (lisensoitua dataa), toimitetaan erikseen. Sama data voidaan tuoda myös työkalussa: Pelaajaryhmä → Wyscout-data ja Rekrytointi → Ehdokasviennit.
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -52,6 +54,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 5.11.2026 | Wyscout 2026: Veikkausliiga omana vientinä, Allsvenskan, Eliteserien ja Superliga ehdokasvienteinä; joukkue luetaan sarakkeesta "Team within selected timeframe" (kauden aikana lähteneet pysyvät omassa seurassaan); VPS-pelaajat yhdistetään myös muodossa "M. Sukunimi"; Portaat-ehdotus pelipaikkojen Wyscout-mittareiksi; Pelaajaryhmä-näkymään Vertailu: Veikkausliiga ja Pohjoismaat | 019, 020 (sisäinen) |
 | 4.11.2026 | Tietoturvatarkastus Supabasen Postgres-käytäntöjä vasten | 018 |
 | 4.11.2026 | Tähtitarha 2023–2026 PalloID:stä (2024: 2, 2026: 3 uusina) | 017 |
 | 4.11.2026 | WFA:n pelaajat lasketaan VPS:lle Huuhkaja- ja Helmariturnauksessa | 016 |

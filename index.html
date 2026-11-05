@@ -473,7 +473,7 @@ nav a[hidden] { display: none !important; }
   const SUUNN = ['Avoin', 'Jatkosopimus', 'Oma nuori', 'Hankinta', 'Laina sisään'];
   const KTYYPIT = ['Hankinta', 'Jatkosopimus', 'Laina ulos', 'Laina sisään', 'Lähtö / myynti', 'Nosto omasta polusta'];
   const JALKI = ['Odottaa', 'Saavutettu', 'Osittain', 'Ei saavutettu'];
-  const S = { mittarit: null, toimenpiteet: null, paikat: null, kortit: null, kaudet: null, pelaajat: null, skenaariot: null, asetukset: null, vahvuus: null, wyscout: null, hallitusraportti: null, talous: null, akatemia: null, rekrytointi: null };
+  const S = { mittarit: null, toimenpiteet: null, paikat: null, kortit: null, kaudet: null, pelaajat: null, skenaariot: null, asetukset: null, vahvuus: null, wyscout: null, vertailu: null, hallitusraportti: null, talous: null, akatemia: null, rekrytointi: null };
   const F = { kausi: 2027, skenaario: null, chip: 'Sopimus', sp: 'Kaikki', osa: 'syksy', hh: false, ik: 'Kaikki', poik: true, nimet: false, ptila: 'Lopetti tai siirtyi', psynt: 'Kaikki' };
   let db = null, me = null, canWrite = true, pendingRender = false, openSlot = null, confirmDel = null, mEdit = null;
   const KU = { list: null, loading: false, err: null };
@@ -767,9 +767,14 @@ nav a[hidden] { display: none !important; }
   const ROOLIRAJA = { avaus: 0.5, rotaatio: 0.2 };   // Portaat-tutkimus: rooli ≥ 20 %, iso rooli ≥ 50 % joukkueen minuuteista
   let _wyIdx = null, _wyKey = null;
   const wyOwn = () => (S.wyscout || []).filter((d) => !d.pool);
-  const wyIndex = () => { const key = wyOwn().map((d) => d.id + (d.tuotu || '')).join('|'); if (_wyKey === key) return _wyIdx; const by = {}, tm = {};
-    wyOwn().forEach((d) => (d.rows || []).forEach((r) => { by[normName(r.n)] = r; tm[r.t] = Math.max(tm[r.t] || 0, r.m || 0); })); _wyKey = key; _wyIdx = { by, tm }; return _wyIdx; };
-  const minShare = (x) => { const ix = wyIndex(); const r = ix.by[normName(x.wy || x.nimi)];
+  // Oma joukkue Wyscout-viennissä ("Team within selected timeframe"). Nimet yhdistetään koko nimellä tai muodossa "M. Sukunimi" vain oman joukkueen riveistä.
+  const OMA_JOUKKUE = 'VPS';
+  const abbrKey = (s) => { const p = normName(s).split(' ').filter(Boolean); return p.length > 1 ? p[0][0] + ' ' + p[p.length - 1] : p.join(' '); };
+  const wyIndex = () => { const key = wyOwn().map((d) => d.id + (d.tuotu || '')).join('|'); if (_wyKey === key) return _wyIdx; const own = [], tm = {};
+    wyOwn().forEach((d) => (d.rows || []).forEach((r) => { tm[r.t] = Math.max(tm[r.t] || 0, r.m || 0); if (normName(r.t) === normName(OMA_JOUKKUE)) own.push(Object.assign({ _d: d }, r)); })); _wyKey = key; _wyIdx = { own, tm }; return _wyIdx; };
+  const findOwn = (x) => { if (!x) return null; const ix = wyIndex(), nm = x.wy || x.nimi; return ix.own.find((r) => normName(r.n) === normName(nm)) || ix.own.find((r) => abbrKey(r.n) === abbrKey(nm)) || null; };
+  const wyVal = (r, col, d) => { const cs = (r && r._d ? r._d.cols : d && d.cols) || []; const i = cs.indexOf(col); return i < 0 ? null : r.v[i]; };
+  const minShare = (x) => { const ix = wyIndex(); const r = findOwn(x);
     if (r && ix.tm[r.t]) return { o: Math.min(1, r.m / ix.tm[r.t]), m: r.m, lahde: 'Wyscout' };
     if (x.minuutit_pct != null && x.minuutit_pct !== '') return { o: Number(x.minuutit_pct) / 100, m: null, lahde: 'PalloID 2026' }; return null; };
   const normPl = (L) => L.map((x) => { const ms = minShare(x); const auto = ms ? (ms.o >= ROOLIRAJA.avaus ? 'Avaus' : ms.o >= ROOLIRAJA.rotaatio ? 'Rotaatio' : 'Kehitys') : null;
@@ -802,14 +807,14 @@ nav a[hidden] { display: none !important; }
   const normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
   const wyDoc = (pid) => wyOwn().filter((d) => d.paikka === pid).sort((a, b) => String(b.tuotu || '').localeCompare(String(a.tuotu || '')))[0] || null;
   const wyMeta = () => (S.wyscout || []).find((d) => d.id === 'meta') || null;
-  const wyRow = (d, x) => { if (!d || !x) return null; const key = normName(x.wy || x.nimi); return d.rows.find((r) => normName(r.n) === key) || null; };
+  const wyRow = (d, x) => { if (!d || !x) return null; return findOwn(x); };
   const pctOf = (d, ci, val, rev) => { const V = d.rows.filter((r) => r.m >= (d.minmin || 450) && r.v[ci] != null).map((r) => r.v[ci]); if (!V.length || val == null) return null;
     const lo = V.filter((v) => (rev ? v > val : v < val)).length, eq = V.filter((v) => v === val).length; return Math.round(100 * (lo + eq / 2) / V.length); };
   // Taso: jokainen mittari 0–10; Wyscout-mittari = 10 × min(1; persentiili / tavoitepersentiili), oma mittari = 10 × min(1; toteuma / tavoite)
   const tasoCalc = (p, A) => { const K = (p.kpit || []).filter((k) => k.n || k.col); const d = wyDoc(p.id); const det = [];
     K.forEach((k) => {
       if (k.lahde === 'wyscout') { if (!d || k.col == null) return; const ci = d.cols.indexOf(k.col); if (ci < 0) return; const tg = Number(k.t) || 70;
-        const pl = A.map((x) => { const r = wyRow(d, x); if (!r || r.m < (d.minmin || 450)) return null; const pc = pctOf(d, ci, r.v[ci], k.suunta === 'alle'); return pc == null ? null : { x, pc, v: r.v[ci], m: r.m, sc: Math.min(10, 10 * pc / tg) }; }).filter(Boolean);
+        const pl = A.map((x) => { const r = wyRow(d, x); if (!r || r.m < (d.minmin || 450)) return null; const rv = wyVal(r, k.col, d); const pc = pctOf(d, ci, rv, k.suunta === 'alle'); return pc == null ? null : { x, pc, v: rv, m: r.m, sc: Math.min(10, 10 * pc / tg) }; }).filter(Boolean);
         if (pl.length) det.push({ k, tg, pl, tyyppi: 'wyscout' });
       } else { const tv = Number(k.t), v = Number(k.v); if (!(tv > 0) || k.v === '' || k.v == null || isNaN(v)) return;
         const sc = Math.min(10, 10 * (k.suunta === 'alle' ? (v > 0 ? tv / v : 1) : v / tv)); det.push({ k, tyyppi: 'oma', pl: [{ x: null, sc, v }], tg: tv }); } });
@@ -823,14 +828,14 @@ nav a[hidden] { display: none !important; }
   async function importWyscout(file, minmin, pool) {
     const XLSX = await loadXLSX(); const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' }); const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: null }); if (!rows.length) throw new Error('Tiedostossa ei ole rivejä');
-    const H = Object.keys(rows[0]); const hName = H.find((h) => /^player$|^pelaaja$/i.test(h)) || H[0], hPos = H.find((h) => /^position$/i.test(h)), hMin = H.find((h) => /minutes played/i.test(h)), hTeam = H.find((h) => /^team$/i.test(h));
+    const H = Object.keys(rows[0]); const hName = H.find((h) => /^player$|^pelaaja$/i.test(h)) || H[0], hPos = H.find((h) => /^position$/i.test(h)), hMin = H.find((h) => /minutes played/i.test(h)), hTeam = H.find((h) => /^team within selected timeframe$/i.test(h)) || H.find((h) => /^team$/i.test(h)), hNow = H.find((h) => /^team$/i.test(h));
     const hAge = H.find((h) => /^age$/i.test(h)), hCon = H.find((h) => /contract expires/i.test(h)), hMv = H.find((h) => /market value/i.test(h));
     if (!hPos || !hMin) throw new Error('Sarakkeita Position ja Minutes played ei löytynyt. Vie Wyscoutin Advanced search -näkymästä.');
-    const skip = new Set([hName, hPos, hMin, hTeam, 'Team within selected timeframe', 'Age', 'Market value', 'Contract expires', 'Birth country', 'Passport country', 'Foot', 'Height', 'Weight', 'On loan', 'Matches played'].filter(Boolean));
+    const skip = new Set([hName, hPos, hMin, hTeam, hNow, 'Team', 'Team within selected timeframe', 'Age', 'Market value', 'Contract expires', 'Birth country', 'Passport country', 'Foot', 'Height', 'Weight', 'On loan', 'Matches played'].filter(Boolean));
     const cols = H.filter((h) => !skip.has(h) && rows.some((r) => typeof r[h] === 'number'));
     const by = {}; let n = 0;
     rows.forEach((r) => { const code = String(r[hPos] || '').split(',')[0].trim().toUpperCase(); const pid = WY_POS[code]; if (!pid) return; const m = Number(r[hMin]) || 0;
-      const o = { n: String(r[hName] || ''), t: String(r[hTeam] || ''), pos: code, m, v: cols.map((c) => (typeof r[c] === 'number' ? Math.round(r[c] * 100) / 100 : null)) };
+      const o = { n: String(r[hName] || ''), t: String(r[hTeam] || ''), pos: code, m, nyt: hNow && hNow !== hTeam && r[hNow] && r[hNow] !== r[hTeam] ? String(r[hNow]) : undefined, v: cols.map((c) => (typeof r[c] === 'number' ? Math.round(r[c] * 100) / 100 : null)) };
       if (hAge && r[hAge] != null) o.a = Number(r[hAge]) || null; if (hCon && r[hCon]) o.c = String(r[hCon]).slice(0, 10); if (hMv && r[hMv] != null) o.mv = Number(r[hMv]) || null;
       (by[pid] = by[pid] || []).push(o); n++; });
     const tuotu = new Date().toISOString(), kausi = (file.name.match(/20\d\d/) || [String(new Date().getFullYear())])[0];
@@ -840,10 +845,27 @@ nav a[hidden] { display: none !important; }
     for (const [pid, R] of Object.entries(by)) await db.doc('wyscout/' + kausi + '_' + pid).set({ paikka: pid, kausi, cols, rows: R, minmin, tuotu, tiedosto: file.name, tuoja: me });
     await db.doc('wyscout/meta').set({ kausi, cols, pelaajia: n, minmin, tuotu, tiedosto: file.name, tuoja: me });
     // yhdistä VPS-pelaajat nimen perusteella
-    let link = 0; const all = Object.values(by).flat();
-    for (const x of S.pelaajat || []) { if (x.wy) continue; const r = all.find((q) => normName(q.n) === normName(x.nimi)); if (r) { await db.doc('pelaajat/' + x.id).update({ wy: r.n }); link++; } }
+    let link = 0; const all = Object.values(by).flat().filter((q) => normName(q.t) === normName(OMA_JOUKKUE));
+    for (const x of S.pelaajat || []) { if (x.wy) continue; const r = all.find((q) => normName(q.n) === normName(x.nimi)) || all.find((q) => abbrKey(q.n) === abbrKey(x.nimi)); if (r) { await db.doc('pelaajat/' + x.id).update({ wy: r.n }); link++; } }
     return { n, cols: cols.length, paikkoja: Object.keys(by).length, link };
   }
+  // Pohjoismaat ja Veikkausliiga: menestysyhtälön ja nelikentän vertailu (Wyscout + CIES + EY + Transfermarkt, kokoelma vertailu)
+  const vertCard = () => { const v = (S.vertailu || []).find((d) => d.id === 'pohjoismaat_2026');
+    if (!v) return el('details', { class: 'sec', id: 'pp-pohjola' }, el('summary', null, el('span', { text: 'Vertailu: Veikkausliiga ja Pohjoismaat' }), el('span', { class: 'note', text: 'Ei tuotu' })), el('div', { class: 'inner' }, el('p', { class: 'note', text: 'Vertailu tuodaan migraatiolla 019 (seuran sisäinen tiedosto).' })));
+    const fmt = (x, u) => x == null || x === '' ? '—' : (typeof x === 'number' ? x.toLocaleString('fi-FI', { maximumFractionDigits: 1 }) : String(x)) + (u && x != null ? ' ' + u : '');
+    const tila = (r) => { if (r.raja == null || r.vps == null) return null; const ok = r.pienempi ? r.vps <= r.raja : r.vps >= r.raja; const near = r.pienempi ? r.vps <= r.raja * 1.2 : r.vps >= r.raja * 0.8; return ok ? 'ok' : near ? 'warn' : 'bad'; };
+    const C = ['VPS', 'Veikkausliiga (mediaani)', 'Ruotsi', 'Norja', 'Tanska', 'Raja'];
+    return el('details', { class: 'sec', id: 'pp-pohjola', open: true }, el('summary', null, el('span', { text: 'Vertailu: Veikkausliiga ja Pohjoismaat' }), el('span', { class: 'note', text: v.lahde + ' · päivitetty ' + v.paivitetty })),
+      el('div', { class: 'inner' },
+        el('p', { class: 'note', text: v.johdanto }),
+        el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Mittari'].concat(C).map((h, i) => el('th', { class: i ? 'num' : null, text: h })))),
+          el('tbody', null, (v.rivit || []).map((r) => { const t = tila(r); return el('tr', null, el('td', null, el('b', { text: r.mittari }), r.selite ? el('div', { class: 'sm', text: r.selite }) : null),
+            el('td', { class: 'num' }, t ? el('span', { class: 'spill ' + t, text: fmt(r.vps, r.yks) }) : el('span', { text: fmt(r.vps, r.yks) })),
+            ...[r.vl, r.ruotsi, r.norja, r.tanska, r.raja].map((x) => el('td', { class: 'num', text: fmt(x, r.yks) }))); })))),
+        el('h3', { text: 'Veikkausliigan seurat 2026', style: 'margin-top:8px' }),
+        el('div', { class: 'tw' }, el('table', null, el('thead', null, el('tr', null, ['Seura', 'Sija', 'Kasvatit %', 'Pysyvyys kk', 'Myydyt nuoret 2025–26', 'Myyntipotentiaali', 'Laatu ≥ 60', 'Roolipelaajien sopimus päättyy 2026', 'Yhtälön osat'].map((h, i) => el('th', { class: i ? 'num' : null, text: h })))),
+          el('tbody', null, (v.seurat || []).map((r) => el('tr', { style: r.seura === OMA_JOUKKUE ? 'background:var(--panel2,rgba(0,0,0,.04));font-weight:600' : null }, el('td', { text: r.seura }), ...[r.sija, r.kasvatit, r.pysyvyys, r.myydyt, r.mp_nyt, r.laatu60, r.sop2026 == null ? null : Math.round(r.sop2026) + ' %', r.osat].map((x) => el('td', { class: 'num', text: fmt(x) }))))))),
+        el('p', { class: 'note', text: v.huomio }))); };
   const wyCard = () => { const mt = wyMeta(); const L = S.pelaajat || []; const linked = L.filter((x) => (S.wyscout || []).some((d) => d.rows && wyRow(d, x))).length;
     return el('details', { class: 'sec', id: 'pp-wyscout', open: !mt }, el('summary', null, el('span', { text: 'Wyscout-data' }), el('span', { class: 'note', text: mt ? mt.tiedosto + ' · ' + mt.pelaajia + ' pelaajaa · tuotu ' + new Date(mt.tuotu).toLocaleDateString('fi-FI') + ' · VPS-pelaajista yhdistetty ' + linked + ' / ' + L.length : 'Ei tuotu' })),
       el('div', { class: 'inner' },
@@ -1244,8 +1266,8 @@ nav a[hidden] { display: none !important; }
     const counts = SEASONS.map((y) => P.filter((p) => health(p, y).kok === 'bad').length);
     return el('div', { style: 'display:flex;flex-direction:column;gap:18px' },
       pageHead('Pelaajaryhmä ' + SEASONS[0] + '–' + SEASONS[SEASONS.length - 1], 'Suunnittele pelipaikat kausittain. Raahaa pelaajia kentällä, vertaa skenaarioita ja klikkaa pisteitä nähdäksesi laskennan.'),
-      el('div', { class: 'row jumps' }, el('span', { class: 'note', text: 'Siirry:' }), jump('pp-tila', 'Tila'), SK.length ? jump('pp-vertailu', 'Vertailu') : null, jump('pp-kentta', 'Kenttäkuva'), jump('pp-aikajana', 'Aikajana'), jump('pp-jono', 'Päätösjono')),
-      pitch, tila, kpiEditor, wyCard(), compare, timeline, queue);
+      el('div', { class: 'row jumps' }, el('span', { class: 'note', text: 'Siirry:' }), jump('pp-tila', 'Tila'), SK.length ? jump('pp-vertailu', 'Vertailu') : null, jump('pp-kentta', 'Kenttäkuva'), jump('pp-aikajana', 'Aikajana'), jump('pp-pohjola', 'Pohjoismaat'), jump('pp-jono', 'Päätösjono')),
+      pitch, tila, kpiEditor, wyCard(), vertCard(), compare, timeline, queue);
   }
 
   function viewPaatokset() {
@@ -1815,7 +1837,7 @@ nav a[hidden] { display: none !important; }
 
   // ---------- Rekrytointi (analyytikko) ----------
   const rkScore = (p, d, r) => { const K = (p.kpit || []).filter((k) => k.lahde === 'wyscout' && k.col); if (!d || !r || !K.length) return null;
-    const det = K.map((k) => { const ci = d.cols.indexOf(k.col); if (ci < 0) return null; const pc = pctOf(d, ci, r.v[ci], k.suunta === 'alle'); return pc == null ? null : { n: k.col, pc, sc: Math.min(10, 10 * pc / (Number(k.t) || 70)) }; }).filter(Boolean);
+    const det = K.map((k) => { const ci = d.cols.indexOf(k.col); if (ci < 0) return null; const pc = pctOf(d, ci, wyVal(r, k.col, d), k.suunta === 'alle'); return pc == null ? null : { n: k.col, pc, sc: Math.min(10, 10 * pc / (Number(k.t) || 70)) }; }).filter(Boolean);
     return det.length ? { sc: det.reduce((a, q) => a + q.sc, 0) / det.length, det } : null; };
   const wyDocsFor = (pid) => (S.wyscout || []).filter((d) => d.paikka === pid && d.rows);
   const findWy = (x) => { for (const d of (S.wyscout || []).filter((q) => q.rows && q.paikka === x.paikka)) { const r = d.rows.find((q) => normName(q.n) === normName(x.wy || x.nimi) && (!x.seura || !q.t || normName(q.t) === normName(x.seura))); if (r) return { d, r }; } return null; };
@@ -1979,7 +2001,7 @@ nav a[hidden] { display: none !important; }
     pendingRender = false; JARJ_NYT = null;
     const v = current();
     document.querySelectorAll('nav a').forEach((n) => { if (n.dataset.view === v) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current'); n.hidden = (HALL() && !['hallitus', 'strategia'].includes(n.dataset.view)) || (n.dataset.view === 'kayttajat' && !UTJ()); });
-    const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout', 'talous', 'akatemia', 'rekrytointi'] : v === 'talous' ? ['pelaajat', 'asetukset', 'wyscout', 'talous'] : v === 'akatemia' ? ['akatemia', 'paikat', 'pelaajat', 'wyscout'] : v === 'rekrytointi' ? ['rekrytointi', 'paikat', 'pelaajat', 'wyscout'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout', 'akatemia', 'rekrytointi'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : v === 'kayttajat' ? [] : ['kortit'];
+    const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout', 'talous', 'akatemia', 'rekrytointi'] : v === 'talous' ? ['pelaajat', 'asetukset', 'wyscout', 'talous'] : v === 'akatemia' ? ['akatemia', 'paikat', 'pelaajat', 'wyscout'] : v === 'rekrytointi' ? ['rekrytointi', 'paikat', 'pelaajat', 'wyscout'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout', 'vertailu', 'akatemia', 'rekrytointi'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : v === 'kayttajat' ? [] : ['kortit'];
     if (!db) { return; }
     if (need.some((k) => S[k] === null)) { $view.replaceChildren(el('div', { class: 'empty', text: 'Ladataan…' })); return; }
     $view.replaceChildren(VIEWS[v]()); const dl = explainDialog(); if (dl) { $view.append(dl); setTimeout(() => { const c = document.getElementById('dlg-close'); if (c) c.focus(); }, 0); }
@@ -1995,7 +2017,7 @@ nav a[hidden] { display: none !important; }
     try { const c = u ? await u.can('data.write') : null; canWrite = c !== false; } catch (e) { canWrite = true; }
     $status.textContent = HALL() ? 'Hallituksen näkymä: strategia ja julkaistu raportti' : canWrite ? 'Muutokset tallentuvat seuran Supabase-tietokantaan' : 'Katselutila: sinulla ei ole muokkausoikeutta';
     const sub = (name) => db.collection(name).onSnapshot((snap) => { S[name] = snap.docs.map((x) => Object.assign({ id: x.id }, x.data())); render(); }, () => { S[name] = S[name] || []; $status.textContent = 'Osa tiedoista ei latautunut'; render(); });
-    (HALL() ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'kaudet', 'pelaajat', 'skenaariot', 'asetukset', 'vahvuus', 'wyscout', 'hallitusraportti', 'talous', 'akatemia', 'rekrytointi']).forEach(sub);
+    (HALL() ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'kaudet', 'pelaajat', 'skenaariot', 'asetukset', 'vahvuus', 'wyscout', 'vertailu', 'hallitusraportti', 'talous', 'akatemia', 'rekrytointi']).forEach(sub);
     render();
   })();
   render();
