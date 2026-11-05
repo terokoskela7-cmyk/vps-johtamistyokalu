@@ -54,6 +54,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 6.11.2026 | Laatuprofiili (StatsBombin pelipaikkapohjat ja FBrefin persentiiliraportti): pelaajakortissa, kenttäkuvan Laatu-näkymässä, rekrytoinnin ehdokashaussa (Laatu-sarake ja profiili klikkaamalla) ja kohteen tietopaketissa vertailuna parhaaseen omaan pelaajaan | – |
 | 5.11.2026 | Wyscout 2026: Veikkausliiga omana vientinä, Allsvenskan, Eliteserien ja Superliga ehdokasvienteinä; joukkue luetaan sarakkeesta "Team within selected timeframe" (kauden aikana lähteneet pysyvät omassa seurassaan); VPS-pelaajat yhdistetään myös muodossa "M. Sukunimi"; Portaat-ehdotus pelipaikkojen Wyscout-mittareiksi; Pelaajaryhmä-näkymään Vertailu: Veikkausliiga ja Pohjoismaat | 019, 020 (sisäinen) |
 | 4.11.2026 | Tietoturvatarkastus Supabasen Postgres-käytäntöjä vasten | 018 |
 | 4.11.2026 | Tähtitarha 2023–2026 PalloID:stä (2024: 2, 2026: 3 uusina) | 017 |
