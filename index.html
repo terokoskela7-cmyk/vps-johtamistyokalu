@@ -230,14 +230,14 @@ pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular',
 .bbar .fa { background: var(--info); } .bbar .fc { background: var(--warn-fill); }
 .bnote { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
 .bfieldwrap { overflow-x: auto; }
-.bpitch { position: relative; min-width: 720px; height: 940px; border-radius: var(--r-md); border: 1px solid var(--line); background: repeating-linear-gradient(180deg, var(--pitch) 0 10%, var(--pitch-2) 10% 20%); }
+.bpitch { position: relative; min-width: 600px; height: 760px; border-radius: var(--r-md); border: 1px solid var(--line); background: repeating-linear-gradient(180deg, var(--pitch) 0 10%, var(--pitch-2) 10% 20%); }
 .plines { position: absolute; inset: 16px; border: 2px solid var(--pitch-line); border-radius: 2px; pointer-events: none; }
 .plines i { position: absolute; border: 2px solid var(--pitch-line); }
 .plines .half { left: 0; right: 0; top: 50%; border-width: 2px 0 0 0; }
 .plines .circ { left: 50%; top: 50%; width: 150px; height: 150px; border-radius: 50%; transform: translate(-50%, -50%); }
 .plines .box { left: 22%; right: 22%; height: 15%; } .plines .box.top { top: -2px; border-top: none; } .plines .box.bot { bottom: -2px; border-bottom: none; }
 .plines .six { left: 38%; right: 38%; height: 5.5%; } .plines .six.top { top: -2px; border-top: none; } .plines .six.bot { bottom: -2px; border-bottom: none; }
-.scard { position: absolute; transform: translateX(-50%); width: clamp(150px, 22%, 200px); background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; box-shadow: var(--shadow); z-index: 1; }
+.scard { position: absolute; transform: translateX(-50%); width: clamp(148px, 21%, 220px); background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; box-shadow: var(--shadow); z-index: 1; }
 .scard.open { z-index: 5; outline: 2px solid var(--accent); }
 .bpitch.layout .scard { outline: 1px dashed var(--accent); }
 .bpitch.layout .shead { cursor: grab; touch-action: none; }
@@ -253,9 +253,9 @@ pre.report { white-space: pre-wrap; font-family: ui-monospace, 'SFMono-Regular',
 .linkbtn { all: unset; cursor: pointer; font-weight: 600; color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
 .linkbtn:hover { color: var(--accent); }
 tr.sel td { background: var(--accent-soft); }
-.vpitch { height: 1060px; }
+.vpitch { height: 760px; }
 .vcard .slbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vcard { width: clamp(150px, 21%, 190px); }
+.vcard { width: clamp(148px, 20%, 210px); }
 .vrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px; align-items: center; padding: 3px 8px; font-size: 12px; border-top: 1px solid var(--line); }
 .vrow.own, .vrow.none, .vrow.ak { grid-template-columns: 1fr auto; }
 .vrow.own span:first-child { font-weight: 600; } .vrow.none { color: var(--bad); font-size: 11.5px; } .vrow.ak { color: var(--ok); }
@@ -1063,6 +1063,27 @@ nav a[hidden] { display: none !important; }
     });
   }
 
+  // Kenttäkuvan asettelu: kortit riveihin y-koordinaatin mukaan, rivit eivät mene päällekkäin, kortit pysyvät kentän sisällä ja kentän korkeus kasvaa sisällön mukaan
+  function layoutPitch(field) {
+    if (!field || !field.isConnected || field.classList.contains('layout')) return;
+    const cards = [...field.querySelectorAll(':scope > .scard')];
+    if (getComputedStyle(field).display === 'grid') { field.style.height = ''; cards.forEach((c) => { c.style.left = ''; c.style.top = ''; }); return; }
+    const W = field.clientWidth, pad = 22, gap = 14, H0 = field.classList.contains('vpitch') ? Math.max(500, Math.min(820, W * 0.6)) : Math.max(600, Math.min(960, W * 0.85));
+    const K = cards.map((c) => ({ c, x: parseFloat(c.dataset.x), y: parseFloat(c.dataset.y), w: c.offsetWidth, h: c.offsetHeight })).filter((k) => !isNaN(k.x) && !isNaN(k.y)).sort((a, b) => a.y - b.y || a.x - b.x);
+    const rows = []; K.forEach((k) => { const r = rows[rows.length - 1]; if (r && k.y - r.y0 <= 8) r.items.push(k); else rows.push({ y0: k.y, items: [k] }); });
+    let bottom = pad;
+    rows.forEach((r, ri) => { r.items.sort((a, b) => a.x - b.x); const h = Math.max(...r.items.map((k) => k.h));
+      const top = Math.max(ri ? bottom + gap : pad, r.y0 / 100 * H0);
+      const xs = r.items.map((k) => Math.min(Math.max(k.x / 100 * W, k.w / 2 + pad), W - k.w / 2 - pad));
+      for (let i = 1; i < xs.length; i++) { const mn = xs[i - 1] + (r.items[i - 1].w + r.items[i].w) / 2 + 10; if (xs[i] < mn) xs[i] = mn; }
+      const last = xs.length - 1, over = last >= 0 ? xs[last] + r.items[last].w / 2 + pad - W : 0; if (over > 0) for (let i = 0; i < xs.length; i++) xs[i] = Math.max(r.items[i].w / 2 + pad, xs[i] - over);
+      r.items.forEach((k, i) => { k.c.style.left = xs[i] + 'px'; k.c.style.top = (top + (h - k.h) / 2) + 'px'; });
+      bottom = top + h; });
+    field.style.height = Math.max(bottom + pad, H0 * 0.8) + 'px';
+  }
+  const layoutPitches = () => document.querySelectorAll('.bpitch').forEach(layoutPitch);
+  let _lpT = null; window.addEventListener('resize', () => { clearTimeout(_lpT); _lpT = setTimeout(layoutPitches, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layoutPitches());
   // Pelipaikkojen siirto kentällä (asettelutila): vedä otsikosta, tallentuu järjestelmäkohtaisesti
   function enableSlotDrag(field, onSave) {
     field.addEventListener('pointerdown', (e) => {
@@ -1174,7 +1195,7 @@ nav a[hidden] { display: none !important; }
         RK.length ? el('a', { href: '#rekrytointi', class: 'srek', title: RK.map((x) => x.nimi + ' (' + (x.tila || 'Seurannassa') + ')').join(', ') }, '◎ ' + RK.length + (RK.length === 1 ? ' rekrytointikohde' : ' rekrytointikohdetta')) : null); };
     const slotCard = (p, q) => { const vp = Object.assign({}, p, { tarve: 1, syvyys: p.pelipaikka === 'Maalivahti' ? 3 : 2 }); const h = health(vp, s, q.L.map((x) => Object.assign({}, x, { paikka: p.id })));
       const open = q.L.some((x) => openSlot === 'kc' + x.id) || openSlot === 'ka' + q.code;
-      return el('div', { class: 'scard' + (open ? ' open' : ''), style: `left:${q.x}%;top:${q.y}%`, 'data-drop-paikka': p.id, 'data-drop-slot': q.code, 'data-code': q.code },
+      return el('div', { class: 'scard' + (open ? ' open' : ''), style: `left:${q.x}%;top:${q.y}%`, 'data-x': q.x, 'data-y': q.y, 'data-drop-paikka': p.id, 'data-drop-slot': q.code, 'data-code': q.code },
         el('div', { class: 'shead', 'data-drop-paikka': p.id, 'data-drop-slot': q.code, 'data-drop-rooli': 'Avaus', title: q.nimi + ' · ' + p.pelipaikka },
           el('b', { text: q.code }), el('span', { class: 'slbl', text: 'Pisteet' }), scoreBtn(h.pisteet, { tyyppi: 'paikka', pid: p.id, slot: q.code, slotIds: q.L.map((z) => z.id), s }), el('span', { class: 'sluot', title: 'Luotettavuus', text: h.luot + ' %' })),
         q.L.map((x) => { const isE = openSlot === 'kc' + x.id; const [v, cls] = chipVal(x);
@@ -2050,7 +2071,7 @@ nav a[hidden] { display: none !important; }
         .sort((a, b) => RK_TILAT.indexOf(b.tila || 'Seurannassa') - RK_TILAT.indexOf(a.tila || 'Seurannassa'));
       const d0 = wyDoc(p.id), osc = (q) => { const r = wyRow(d0, q); const sc = r && r.m >= ((d0 && d0.minmin) || 450) ? rkScore(p, d0, r) : null; return sc ? f1(sc.sc) : ''; };
       const ksc = (q) => { const w = findWy(q); const sc = w ? rkScore(p, w.d, w.r) : null; return sc ? f1(sc.sc) : ''; };
-      return el('div', { class: 'scard vcard', style: `left:${x}%;top:${y}%`, 'data-vp': p.id, 'data-vs': code },
+      return el('div', { class: 'scard vcard', style: `left:${x}%;top:${y}%`, 'data-x': x, 'data-y': y, 'data-vp': p.id, 'data-vs': code },
         el('div', { class: 'shead', title: nimi }, el('b', { text: code }), el('span', { class: 'slbl', text: PF.rooli || nimi }), el('span'), el('span')),
         mine.map((q) => el('div', { class: 'vrow own' }, el('span', { text: q.nimi }), el('span', { class: 'vsc', text: osc(q) || (q._osuus != null ? Math.round(100 * q._osuus) + ' %' : '') }))),
         !mine.length ? el('div', { class: 'vrow none', text: 'ei omaa pelaajaa' }) : null,
@@ -2136,7 +2157,7 @@ nav a[hidden] { display: none !important; }
     const need = (HALL() && v === 'hallitus') ? ['mittarit', 'toimenpiteet', 'hallitusraportti'] : v === 'hallitus' ? ['mittarit', 'toimenpiteet', 'paikat', 'kortit', 'pelaajat', 'asetukset', 'wyscout', 'talous', 'akatemia', 'rekrytointi'] : v === 'talous' ? ['pelaajat', 'asetukset', 'wyscout', 'talous'] : v === 'akatemia' ? ['akatemia', 'paikat', 'pelaajat', 'wyscout'] : v === 'rekrytointi' ? ['rekrytointi', 'paikat', 'pelaajat', 'wyscout'] : v === 'strategia' ? ['mittarit', 'toimenpiteet'] : v === 'pelipaikat' ? ['paikat', 'pelaajat', 'skenaariot', 'asetukset', 'wyscout', 'vertailu', 'akatemia', 'rekrytointi'] : v === 'sarjat' ? ['kaudet', 'vahvuus'] : v === 'kayttajat' ? [] : ['kortit'];
     if (!db) { return; }
     if (need.some((k) => S[k] === null)) { $view.replaceChildren(el('div', { class: 'empty', text: 'Ladataan…' })); return; }
-    $view.replaceChildren(VIEWS[v]()); const dl = explainDialog(); if (dl) { $view.append(dl); setTimeout(() => { const c = document.getElementById('dlg-close'); if (c) c.focus(); }, 0); }
+    $view.replaceChildren(VIEWS[v]()); requestAnimationFrame(layoutPitches); const dl = explainDialog(); if (dl) { $view.append(dl); setTimeout(() => { const c = document.getElementById('dlg-close'); if (c) c.focus(); }, 0); }
   }
   $view.addEventListener('focusout', () => setTimeout(() => { if (pendingRender) render(); }, 0));
   window.addEventListener('hashchange', () => { openSlot = null; confirmDel = null; render(); });

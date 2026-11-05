@@ -54,6 +54,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 6.11.2026 | Kenttäkuvat (Pelaajaryhmä ja rekrytoinnin varjokenttä) skaalautuvat: kortit riveihin ilman päällekkäisyyttä, pysyvät kentän sisällä ja kentän korkeus mukautuu sisältöön ja leveyteen | – |
 | 6.11.2026 | Rekrytointi viitenä vaiheena: 1 Tarve (pelipaikat syineen, akatemian vaihtoehto, urheilujohtaja merkitsee haussa olevat), 2 Profiili (rooli, reunaehdot, hyväksyjä, mittarit), 3 Haku (ehdokkaat ja laatuprofiili), 4 Seuranta (kohdelista ja varjokenttä), 5 Päätös (tietopaketti ja päätöskortti) | – |
 | 6.11.2026 | Laatuprofiili (StatsBombin pelipaikkapohjat ja FBrefin persentiiliraportti): pelaajakortissa, kenttäkuvan Laatu-näkymässä, rekrytoinnin ehdokashaussa (Laatu-sarake ja profiili klikkaamalla) ja kohteen tietopaketissa vertailuna parhaaseen omaan pelaajaan | – |
 | 5.11.2026 | Wyscout 2026: Veikkausliiga omana vientinä, Allsvenskan, Eliteserien ja Superliga ehdokasvienteinä; joukkue luetaan sarakkeesta "Team within selected timeframe" (kauden aikana lähteneet pysyvät omassa seurassaan); VPS-pelaajat yhdistetään myös muodossa "M. Sukunimi"; Portaat-ehdotus pelipaikkojen Wyscout-mittareiksi; Pelaajaryhmä-näkymään Vertailu: Veikkausliiga ja Pohjoismaat | 019, 020 (sisäinen) |
