@@ -26,6 +26,7 @@ SQL Editor → aja tiedostot yksi kerrallaan, kukin omana ajonaan:
 16. `018_tietoturva_ja_suorituskyky.sql` – säännöt hakevat roolin kerran kyselyssä, urheilujohtajan päätös suojattu tietokannassa, muokkaaja kirjautumisesta, anon-oikeudet pois
 17. `019_vertailu.sql` – kokoelma vertailu (Pohjoismaat ja Veikkausliiga -vertailu Pelaajaryhmä-näkymään)
 18. Wyscout 2026 -data ja vertailun luvut: seuran sisäinen tiedosto `020_wyscout_2026_data.sql` (lisensoitua dataa), toimitetaan erikseen. Sama data voidaan tuoda myös työkalussa: Pelaajaryhmä → Wyscout-data ja Rekrytointi → Ehdokasviennit.
+19. `021_kasvattajaraha.sql` – mittari Kasvattajaraha maaotteluista (VPS ja VPS-j), 2025 ja Veikkausliigan vertailu
 
 Kaikki tiedostot ovat toistettavia: uudelleenajo ei riko mitään.
 
@@ -54,6 +55,7 @@ Myöhemmin, ennen kuin muut VPS:n käyttäjät otetaan mukaan:
 ## Roolit
 | Rooli | Näkee | Kirjaa |
 | --- | --- | --- |
+| 6.11.2026 | Uusi strategiamittari: Kasvattajaraha maaotteluista (Palloliiton kasvattajarahamääräykset 2025), välitavoitteena Veikkausliigaseurojen mediaani | 021 |
 | 6.11.2026 | Mittarieditori: pelipaikan laatuprofiilin ja Taso-pisteiden Wyscout-mittarit valitaan, lisätään, poistetaan, nimetään, ryhmitellään ja järjestetään samassa taulukossa (Pelaajaryhmä → Mittarit ja Rekrytointi → Profiili); Palauta Portaat-pohja | – |
 | 6.11.2026 | Kenttäkuvat (Pelaajaryhmä ja rekrytoinnin varjokenttä) skaalautuvat: kortit riveihin ilman päällekkäisyyttä, pysyvät kentän sisällä ja kentän korkeus mukautuu sisältöön ja leveyteen | – |
 | 6.11.2026 | Rekrytointi viitenä vaiheena: 1 Tarve (pelipaikat syineen, akatemian vaihtoehto, urheilujohtaja merkitsee haussa olevat), 2 Profiili (rooli, reunaehdot, hyväksyjä, mittarit), 3 Haku (ehdokkaat ja laatuprofiili), 4 Seuranta (kohdelista ja varjokenttä), 5 Päätös (tietopaketti ja päätöskortti) | – |
